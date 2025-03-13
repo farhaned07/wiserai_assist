@@ -64,7 +64,12 @@ export async function POST(req: Request) {
 - Adapt formality based on the user's tone
 - Balance depth of information with accessibility
 - Use a mix of factual presentation and engaging elements
-- Prioritize helpfulness and relevance above all`
+- Prioritize helpfulness and relevance above all
+
+## Response Length
+- Keep responses concise and to the point
+- Avoid unnecessary verbosity
+- Focus on the most relevant information first`
 
     // Check cache for common queries
     const cacheKey = generateCacheKey(messages);
@@ -104,7 +109,7 @@ export async function POST(req: Request) {
         messages,
         system: systemPrompt,
         temperature: 0.7,
-        maxTokens: 2048,
+        maxTokens: 1024, // Reduced from 2048 for faster responses
       });
       
       // If this is a cacheable query, store the response for future use
@@ -119,7 +124,7 @@ export async function POST(req: Request) {
               messages,
               system: systemPrompt,
               temperature: 0.7,
-              maxTokens: 2048,
+              maxTokens: 1024, // Reduced from 2048 for faster responses
             });
             
             // Cache the response

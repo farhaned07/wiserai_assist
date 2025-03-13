@@ -12,13 +12,33 @@ interface EnhancedTypingIndicatorProps {
 
 export default function EnhancedTypingIndicator({ className, variant = "modern" }: EnhancedTypingIndicatorProps) {
   const [dots, setDots] = useState(1)
+  const [elapsedTime, setElapsedTime] = useState(0)
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const dotsInterval = setInterval(() => {
       setDots((prev) => (prev < 3 ? prev + 1 : 1))
     }, 500)
-    return () => clearInterval(interval)
+    
+    // Add timer to track elapsed time
+    const startTime = Date.now()
+    const timerInterval = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000))
+    }, 1000)
+    
+    return () => {
+      clearInterval(dotsInterval)
+      clearInterval(timerInterval)
+    }
   }, [])
+
+  // Format time display
+  const formatTime = (seconds: number) => {
+    if (seconds < 5) return ""; // Don't show time for quick responses
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  }
 
   if (variant === "minimal") {
     return (
@@ -88,7 +108,12 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <span className="mr-1">Thinking</span>
+          <span className="mr-1">
+            Thinking
+            {elapsedTime > 5 && (
+              <span className="text-xs ml-1 opacity-70">({formatTime(elapsedTime)})</span>
+            )}
+          </span>
           {[0, 1, 2].map((i) => (
             <motion.span
               key={i}
@@ -126,6 +151,9 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
       </motion.div>
       <div className="text-sm font-medium text-muted-foreground">
         Thinking
+        {elapsedTime > 5 && (
+          <span className="text-xs ml-1 opacity-70">({formatTime(elapsedTime)})</span>
+        )}
         <motion.span
           animate={{ opacity: [0, 1, 0] }}
           transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 0 }}

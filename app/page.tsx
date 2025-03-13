@@ -45,6 +45,7 @@ export default function ChatPage() {
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [selectedText, setSelectedText] = useState("")
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, error, setMessages, reload } = useChat({
     api: "/api/chat",
@@ -275,6 +276,27 @@ export default function ChatPage() {
     const textarea = document.querySelector('textarea')
     if (textarea) {
       textarea.focus()
+    }
+  }
+
+  // Create a function to manually stop generation
+  const handleStopGeneration = () => {
+    // Since we can't directly access the abort controller,
+    // we'll use a different approach to stop generation
+    
+    // Add the current user message to indicate stopping
+    if (isLoading) {
+      append({
+        role: 'user',
+        content: language === "en" ? '[Generation stopped by user]' : '[উৎপাদন ব্যবহারকারী দ্বারা বন্ধ করা হয়েছে]'
+      })
+      
+      toast({
+        title: language === "en" ? "Generation stopped" : "উৎপাদন বন্ধ করা হয়েছে",
+        description: language === "en" 
+          ? "The AI response generation was stopped." 
+          : "এআই প্রতিক্রিয়া উৎপাদন বন্ধ করা হয়েছে।",
+      })
     }
   }
 
@@ -605,6 +627,23 @@ export default function ChatPage() {
                   >
                     <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
                       <EnhancedTypingIndicator variant="modern" />
+                      
+                      <motion.div 
+                        className="mt-3 flex justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 2 }}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleStopGeneration}
+                          className="bg-red-500/10 hover:bg-red-500/20 text-xs rounded-full px-3 py-1 h-auto"
+                        >
+                          <span className="mr-1">⏹️</span>
+                          {language === "en" ? "Stop generating" : "উৎপাদন বন্ধ করুন"}
+                        </Button>
+                      </motion.div>
                     </div>
                   </motion.div>
                 )}
