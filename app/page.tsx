@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useChat } from "ai/react"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,6 +27,32 @@ import { useTheme } from "next-themes"
 import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import AutoResizeTextarea from "@/components/auto-resize-textarea"
+import { debounce } from "lodash"
+
+// Add a utility function for local storage
+const CHAT_STORAGE_KEY = "wiser_chat_history"
+
+function saveChatToLocalStorage(messages: any[]) {
+  if (typeof window === 'undefined') return
+  try {
+    // Only store the last 10 conversations to avoid storage limits
+    const limitedMessages = messages.slice(-20)
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(limitedMessages))
+  } catch (error) {
+    console.error("Error saving chat to local storage:", error)
+  }
+}
+
+function loadChatFromLocalStorage() {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem(CHAT_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch (error) {
+    console.error("Error loading chat from local storage:", error)
+    return []
+  }
+}
 
 export default function ChatPage() {
   const { theme, setTheme } = useTheme()
@@ -46,6 +72,9 @@ export default function ChatPage() {
   const [selectedText, setSelectedText] = useState("")
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [inputDraft, setInputDraft] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+  const [storedMessages, setStoredMessages] = useState<any[]>([])
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, error, setMessages, reload } = useChat({
     api: "/api/chat",
@@ -71,6 +100,38 @@ export default function ChatPage() {
       })
     },
   })
+
+  // Create a debounced version of handleInputChange
+  const debouncedInputChange = useCallback(
+    debounce((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      handleInputChange(e)
+      setIsTyping(false)
+    }, 300),
+    [handleInputChange]
+  )
+
+  // Handle input changes with debounce
+  const handleDebouncedInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputDraft(e.target.value)
+    setIsTyping(true)
+    debouncedInputChange(e)
+  }
+
+  // Load chat history from local storage on initial render
+  useEffect(() => {
+    const loadedMessages = loadChatFromLocalStorage()
+    if (loadedMessages.length > 0) {
+      setMessages(loadedMessages)
+      setShowWelcome(false)
+    }
+  }, [setMessages])
+
+  // Save chat history to local storage when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveChatToLocalStorage(messages)
+    }
+  }, [messages])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -759,10 +820,10 @@ export default function ChatPage() {
                     </div>
                   ) : (
                     <EnhancedChatInput
-                      input={input}
-                      handleInputChange={handleInputChange}
+                      input={inputDraft || input}
+                      handleInputChange={handleDebouncedInputChange}
                       handleSubmit={handleSubmit}
-                      isLoading={isLoading}
+                      isLoading={isLoading || isTyping}
                       onVoiceInputToggle={handleVoiceInputToggle}
                       onFileUploadToggle={() => setShowFileUpload(!showFileUpload)}
                       isVoiceInputActive={isVoiceInputActive}
