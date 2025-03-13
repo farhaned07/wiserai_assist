@@ -29,6 +29,7 @@ const nextConfig = {
     parallelServerCompiles: true,
     optimizeCss: true,
     optimizePackageImports: ['framer-motion', 'lucide-react'],
+    critters: true,
   },
   output: 'standalone',
 }
