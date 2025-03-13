@@ -4,7 +4,7 @@ import type { Message } from "ai"
 import { Avatar } from "@/components/ui/avatar"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import MarkdownRenderer from "@/components/markdown-renderer"
+import SimpleMarkdownRenderer from "@/components/simple-markdown-renderer"
 import MessageReactions from "@/components/message-reactions"
 import { useState } from "react"
 import { Copy, Check, MoreHorizontal } from "lucide-react"
@@ -54,7 +54,11 @@ export default function ChatMessage({ message, language, isLoading = false }: Ch
           )}
         >
           <div className="relative">
-            <MarkdownRenderer content={message.content} />
+            {isUser ? (
+              <div className="whitespace-pre-wrap">{message.content}</div>
+            ) : (
+              <SimpleMarkdownRenderer content={message.content} className="prose prose-sm dark:prose-invert max-w-none" />
+            )}
 
             <div className={cn("absolute top-0 right-0 opacity-0 transition-opacity", "group-hover:opacity-100")}>
               <div className="flex gap-1">
