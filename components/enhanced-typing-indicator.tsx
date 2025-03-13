@@ -46,9 +46,9 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="w-2 h-2 bg-blue-400/70 rounded-full"
+            className="w-1 h-1 bg-blue-400/70 rounded-full"
             animate={{
-              y: [0, -5, 0],
+              y: [0, -3, 0],
               opacity: [0.5, 1, 0.5],
             }}
             transition={{
@@ -65,14 +65,14 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
 
   if (variant === "dots") {
     return (
-      <div className={cn("flex items-center justify-center p-2", className)}>
+      <div className={cn("flex items-center justify-center", className)}>
         <div className="flex space-x-1">
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-2 h-2 bg-blue-400/70 rounded-full"
+              className="w-1 h-1 bg-blue-400/70 rounded-full"
               animate={{
-                y: [0, -5, 0],
+                y: [0, -3, 0],
                 opacity: [0.5, 1, 0.5],
               }}
               transition={{
@@ -90,9 +90,9 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
 
   if (variant === "modern") {
     return (
-      <div className={cn("flex items-center gap-3 p-2", className)}>
+      <div className={cn("flex items-center gap-2", className)}>
         <motion.div
-          className="relative w-6 h-6 flex items-center justify-center"
+          className="relative w-4 h-4 flex items-center justify-center"
           animate={{ rotate: 360 }}
           transition={{
             duration: 2,
@@ -100,10 +100,10 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
             ease: "linear",
           }}
         >
-          <Loader2 className="h-5 w-5 text-blue-400" />
+          <Loader2 className="h-4 w-4 text-blue-400" />
         </motion.div>
         <motion.div
-          className="text-sm font-medium text-muted-foreground flex items-center"
+          className="text-xs text-muted-foreground/70 flex items-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -119,7 +119,7 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
               key={i}
               animate={{
                 opacity: [0, 1, 0],
-                y: [0, -2, 0],
+                y: [0, -1, 0],
               }}
               transition={{
                 duration: 1.5,
@@ -137,9 +137,9 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
 
   // Default variant
   return (
-    <div className={cn("flex items-center space-x-2 p-2", className)}>
+    <div className={cn("flex items-center space-x-2", className)}>
       <motion.div
-        className="relative w-6 h-6 rounded-full bg-blue-400/10 flex items-center justify-center"
+        className="relative w-4 h-4 rounded-full bg-blue-400/10 flex items-center justify-center"
         animate={{ scale: [0.9, 1.1, 0.9] }}
         transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
       >
@@ -149,7 +149,7 @@ export default function EnhancedTypingIndicator({ className, variant = "modern" 
           transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
         />
       </motion.div>
-      <div className="text-sm font-medium text-muted-foreground">
+      <div className="text-xs text-muted-foreground/70">
         Thinking
         {elapsedTime > 5 && (
           <span className="text-xs ml-1 opacity-70">({formatTime(elapsedTime)})</span>

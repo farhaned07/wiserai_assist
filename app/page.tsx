@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import AutoResizeTextarea from "@/components/auto-resize-textarea"
 import { debounce } from "lodash"
+import AuthWrapper from "@/components/auth/auth-wrapper"
 
 // Add a utility function for local storage
 const CHAT_STORAGE_KEY = "wiser_chat_history"
@@ -101,24 +102,21 @@ export default function ChatPage() {
     },
   })
 
-  // Create a debounced version of handleInputChange
-  const debouncedInputChange = useCallback(
-    debounce((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      handleInputChange(e)
-      setIsTyping(false)
-    }, 300),
-    [handleInputChange]
-  )
-
-  // Handle input changes with debounce
-  const handleDebouncedInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  // Handle input changes directly without debounce
+  const handleDirectInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleInputChange(e)
     setInputDraft(e.target.value)
-    setIsTyping(true)
-    debouncedInputChange(e)
   }
 
   // Load chat history from local storage on initial render
   useEffect(() => {
+    // Clear chat history on page refresh
+    if (window.performance.navigation.type === 1) { // Check if it's a page refresh
+      localStorage.removeItem(CHAT_STORAGE_KEY)
+      setShowWelcome(true)
+      return
+    }
+    
     const loadedMessages = loadChatFromLocalStorage()
     if (loadedMessages.length > 0) {
       setMessages(loadedMessages)
@@ -350,27 +348,6 @@ export default function ChatPage() {
     }
   }
 
-  // Create a function to manually stop generation
-  const handleStopGeneration = () => {
-    // Since we can't directly access the abort controller,
-    // we'll use a different approach to stop generation
-    
-    // Add the current user message to indicate stopping
-    if (isLoading) {
-      append({
-        role: 'user',
-        content: language === "en" ? '[Generation stopped by user]' : '[উৎপাদন ব্যবহারকারী দ্বারা বন্ধ করা হয়েছে]'
-      })
-      
-      toast({
-        title: language === "en" ? "Generation stopped" : "উৎপাদন বন্ধ করা হয়েছে",
-        description: language === "en" 
-          ? "The AI response generation was stopped." 
-          : "এআই প্রতিক্রিয়া উৎপাদন বন্ধ করা হয়েছে।",
-      })
-    }
-  }
-
   // Translations
   const translations = {
     en: {
@@ -516,16 +493,11 @@ export default function ChatPage() {
               <Settings size={18} />
             </Button>
           </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button variant="outline" size="sm" className="rounded-full bg-white/5 hover:bg-white/10 border-white/10">
-              {language === "en" ? "Sign up" : "সাইন আপ"}
-            </Button>
-          </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button variant="ghost" size="sm" className="rounded-full bg-white/5 hover:bg-white/10 border-white/10">
-              {language === "en" ? "Sign in" : "সাইন ইন"}
-            </Button>
-          </motion.div>
+          <AuthWrapper 
+            language={language} 
+            onSettingsClick={() => setShowSettingsDialog(!showSettingsDialog)}
+            onHelpClick={() => {}} 
+          />
         </div>
       </motion.header>
 
@@ -701,23 +673,6 @@ export default function ChatPage() {
                   >
                     <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
                       <EnhancedTypingIndicator variant="modern" />
-                      
-                      <motion.div 
-                        className="mt-3 flex justify-center"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 2 }}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleStopGeneration}
-                          className="bg-red-500/10 hover:bg-red-500/20 text-xs rounded-full px-3 py-1 h-auto"
-                        >
-                          <span className="mr-1">⏹️</span>
-                          {language === "en" ? "Stop generating" : "উৎপাদন বন্ধ করুন"}
-                        </Button>
-                      </motion.div>
                     </div>
                   </motion.div>
                 )}
@@ -820,10 +775,10 @@ export default function ChatPage() {
                     </div>
                   ) : (
                     <EnhancedChatInput
-                      input={inputDraft || input}
-                      handleInputChange={handleDebouncedInputChange}
+                      input={input}
+                      handleInputChange={handleDirectInputChange}
                       handleSubmit={handleSubmit}
-                      isLoading={isLoading || isTyping}
+                      isLoading={isLoading}
                       onVoiceInputToggle={handleVoiceInputToggle}
                       onFileUploadToggle={() => setShowFileUpload(!showFileUpload)}
                       isVoiceInputActive={isVoiceInputActive}

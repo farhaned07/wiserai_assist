@@ -38,9 +38,6 @@ export default function EnhancedChatInput({
 }: EnhancedChatInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null)
-  const [isExpanded, setIsExpanded] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -62,55 +59,35 @@ export default function EnhancedChatInput({
     },
   }[language]
 
-  // Handle typing indicator
-  useEffect(() => {
-    if (input.trim() && !isTyping) {
-      setIsTyping(true)
-    }
-
-    if (typingTimeout) {
-      clearTimeout(typingTimeout)
-    }
-
-    const timeout = setTimeout(() => {
-      setIsTyping(false)
-    }, 1000)
-
-    setTypingTimeout(timeout)
-
-    return () => {
-      if (typingTimeout) {
-        clearTimeout(typingTimeout)
-      }
-    }
-  }, [input])
-
-  // Focus the input when component mounts
+  // Focus management
   useEffect(() => {
     if (!isVoiceInputActive && textareaRef.current) {
       textareaRef.current.focus()
     }
   }, [isVoiceInputActive])
 
-  // Show suggestions when input is focused and empty
+  // Show suggestions only when focused and empty
   useEffect(() => {
     setShowSuggestions(isFocused && !input.trim())
   }, [isFocused, input])
 
-  // Handle keyboard shortcuts
+  // Keyboard shortcuts with preventDefault
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl+Enter or Cmd+Enter to submit
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         if (input.trim() && !isLoading && !disabled) {
           e.preventDefault()
-          formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+          e.stopPropagation()
+          formRef.current?.dispatchEvent(
+            new Event('submit', { cancelable: true, bubbles: true })
+          )
         }
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [input, isLoading, disabled])
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -153,22 +130,6 @@ export default function EnhancedChatInput({
           animate={isFocused ? "focused" : "unfocused"}
           initial="unfocused"
         >
-          {/* Typing indicator */}
-          <AnimatePresence>
-            {isTyping && !isLoading && (
-              <motion.div
-                className="absolute -top-6 left-4 text-xs text-blue-400 flex items-center gap-1"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Sparkles size={12} className="animate-pulse" />
-                <span>{language === "en" ? "Typing..." : "টাইপিং..."}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <AutoResizeTextarea
             ref={textareaRef}
             value={input}
@@ -180,7 +141,7 @@ export default function EnhancedChatInput({
             maxRows={6}
             showCharCount={true}
             maxLength={maxLength}
-            animateHeight={true}
+            animateHeight={false}
             disabled={disabled || isLoading}
           />
 

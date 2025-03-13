@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ToastProvider } from "@/components/ui/toast"
 import { font } from "@/lib/fonts"
 import { cn } from "@/lib/utils"
+import { AuthProvider } from "@/lib/auth-context"
 
 export const metadata = {
   title: "wiser - AI Assistant",
@@ -26,7 +27,9 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={cn(font.variable, "bg-[#1A1B1E]")}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-          <ToastProvider>{children}</ToastProvider>
+          <AuthProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

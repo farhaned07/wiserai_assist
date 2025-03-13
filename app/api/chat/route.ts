@@ -2,6 +2,7 @@ import { deepseek } from "@ai-sdk/deepseek"
 import { streamText, generateText } from "ai"
 import { NextResponse } from "next/server"
 import { createHash } from "crypto"
+import { createClient } from '@/lib/supabase-server'
 
 export const runtime = "nodejs"
 export const maxDuration = 60; // Set max duration to 60 seconds
@@ -79,6 +80,10 @@ export async function POST(req: Request) {
       );
     }
     
+    // Get the user session
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    
     // Validate request body
     let body;
     try {
@@ -102,9 +107,9 @@ export async function POST(req: Request) {
     const systemPrompt = `You are Bangladesh AI, a helpful assistant optimized for both Bangla and English speakers.
 
 ## Language Adaptation
-- Respond in the same language the user is using (Bangla or English)
+- Default to responding in Bangla unless the user explicitly asks in English
 - If the user switches languages, adapt accordingly
-- For mixed language queries, respond in the predominant language
+- For mixed language queries, maintain proper sentence structure and grammar in both languages
 
 ## Knowledge Focus
 - Specialize in Bangladesh's culture, history, geography, economy, and current affairs
@@ -113,7 +118,7 @@ export async function POST(req: Request) {
 
 ## Response Structure
 - Always begin with a direct answer to the user's question in 1-2 sentences
-- Use clear headings (##) to organize longer responses into sections
+- Use clear Markdown headings (###) to organize longer responses into sections
 - For complex topics, use bullet points or numbered lists
 - Include a brief conclusion or summary for longer responses
 - Limit responses to 3-5 key points maximum
@@ -121,6 +126,7 @@ export async function POST(req: Request) {
 ## Response Style
 - Use clear, concise language appropriate for the user's proficiency level
 - Format responses with Markdown for readability (headings, lists, bold for emphasis)
+- Use proper Bangla punctuation and spacing for better text alignment
 - Include relevant examples that resonate with Bangladeshi context when appropriate
 - Be respectful of cultural values and religious sensitivities
 
@@ -132,10 +138,21 @@ export async function POST(req: Request) {
 - Prioritize helpfulness and relevance above all
 
 ## Response Length
-- Keep responses concise and to the point (under 250 words when possible)
+- Dynamically adjust response length based on query complexity:
+  - Keep responses concise for simple queries (under 150 words)
+  - Provide more detailed explanations for complex topics (up to 250 words)
 - Avoid unnecessary verbosity and repetition
 - Focus on the most relevant information first
-- For complex questions, provide a brief answer followed by structured details`
+
+## Code and Technical Content
+- For coding-related queries, use proper Markdown code blocks with language specification (e.g., \`\`\`jsx)
+- Ensure code examples are correct, concise, and well-commented
+- Explain technical concepts in simple terms before diving into details
+
+## Handling Ambiguity
+- For ambiguous queries, ask clarifying questions instead of guessing
+- When uncertain, acknowledge limitations and suggest alternatives
+- Maintain context from previous messages to improve relevance of follow-up responses`
 
     // Generate cache key
     const cacheKey = generateCacheKey(messages);
@@ -195,8 +212,9 @@ export async function POST(req: Request) {
       model: deepseek("deepseek-chat"),
       messages,
       system: systemPrompt,
-      temperature: 0.6,
-      maxTokens: 800,
+      temperature: 0.7, // Slightly increased for more natural responses
+      maxTokens: 1000, // Increased to allow for more detailed responses when needed
+      topP: 0.9, // Added to improve response quality
     }).then(result => result.text);
     
     // Store the promise in the in-flight requests map
@@ -207,8 +225,9 @@ export async function POST(req: Request) {
       model: deepseek("deepseek-chat"),
       messages,
       system: systemPrompt,
-      temperature: 0.6,
-      maxTokens: 800,
+      temperature: 0.7, // Slightly increased for more natural responses
+      maxTokens: 1000, // Increased to allow for more detailed responses when needed
+      topP: 0.9, // Added to improve response quality
     });
     
     // Store the response in the cache once it's complete
