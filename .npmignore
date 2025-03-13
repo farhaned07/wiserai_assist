@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# But not these files...
+!.npmrc
+!.yarnrc
+!package.json
+!package-lock.json 
