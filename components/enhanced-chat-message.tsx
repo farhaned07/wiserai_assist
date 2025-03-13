@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, memo } from "react"
 import type { Message } from "ai"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import MarkdownRenderer from "@/components/markdown-renderer"
+import SimpleMarkdownRenderer from "@/components/simple-markdown-renderer"
 import { Copy, Check, Sparkles, BookOpen, HelpCircle, BarChart3, Code, Share, ThumbsUp, ThumbsDown, MoreHorizontal } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
@@ -273,7 +273,7 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
         {isUser ? (
           <div className="whitespace-pre-wrap">{messageContent}</div>
         ) : (
-          <MarkdownRenderer content={messageContent} />
+          <SimpleMarkdownRenderer content={messageContent} className="prose prose-sm dark:prose-invert max-w-none" />
         )}
       </div>
 
