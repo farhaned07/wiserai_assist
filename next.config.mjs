@@ -30,6 +30,7 @@ const nextConfig = {
     optimizeCss: true,
     optimizePackageImports: ['framer-motion', 'lucide-react'],
   },
+  output: 'standalone',
 }
 
 mergeConfig(nextConfig, userConfig)
