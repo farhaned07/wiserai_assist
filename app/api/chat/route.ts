@@ -40,16 +40,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "DeepSeek API key is not configured" }, { status: 500 })
     }
 
-    // Check cache for common queries
-    const cacheKey = generateCacheKey(messages);
-    if (cacheKey) {
-      const cachedResult = responseCache.get(cacheKey);
-      if (cachedResult && (Date.now() - cachedResult.timestamp < CACHE_TTL)) {
-        // Return cached response but don't stream it
-        return NextResponse.json({ response: cachedResult.response });
-      }
-    }
-
     // System prompt with core instructions
     const systemPrompt = `You are Bangladesh AI, a helpful assistant optimized for both Bangla and English speakers.
 
@@ -76,60 +66,94 @@ export async function POST(req: Request) {
 - Use a mix of factual presentation and engaging elements
 - Prioritize helpfulness and relevance above all`
 
-    // For non-streaming responses (for caching purposes)
+    // Check cache for common queries
+    const cacheKey = generateCacheKey(messages);
+    let cachedResponse = null;
+    
     if (cacheKey) {
-      try {
-        // Use generateText instead of streamText.complete
-        const { text } = await generateText({
-          model: deepseek("deepseek-chat"),
-          messages,
-          system: systemPrompt,
-          temperature: 0.7,
-          maxTokens: 2048,
-        });
-        
-        // Cache the response
-        if (responseCache.size >= MAX_CACHE_SIZE) {
-          // Remove oldest entry if cache is full
-          let oldestKey = null;
-          let oldestTime = Date.now();
-          
-          for (const [key, value] of responseCache.entries()) {
-            if (value.timestamp < oldestTime) {
-              oldestTime = value.timestamp;
-              oldestKey = key;
-            }
-          }
-          
-          if (oldestKey) {
-            responseCache.delete(oldestKey);
-          }
-        }
-        
-        responseCache.set(cacheKey, {
-          timestamp: Date.now(),
-          response: text
-        });
-        
-        return NextResponse.json({ response: text });
-      } catch (error) {
-        console.error("Error generating non-streaming response:", error);
-        // Fall back to streaming response
+      const cachedResult = responseCache.get(cacheKey);
+      if (cachedResult && (Date.now() - cachedResult.timestamp < CACHE_TTL)) {
+        cachedResponse = cachedResult.response;
+        // We'll use this cached response with streaming below
       }
     }
 
-    // For streaming responses (most cases)
-    const result = streamText({
-      model: deepseek("deepseek-chat"),
-      messages,
-      system: systemPrompt,
-      temperature: 0.7,
-      maxTokens: 2048,
-    })
-
-    return result.toDataStreamResponse({
-      sendReasoning: false,
-    })
+    // Always use streaming response for consistency with useChat hook
+    if (cachedResponse) {
+      // For cached responses, create a ReadableStream that immediately returns the cached response
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          // Format the response as expected by the useChat hook
+          const message = {
+            id: Date.now().toString(),
+            role: "assistant",
+            content: cachedResponse,
+          };
+          
+          controller.enqueue(encoder.encode(JSON.stringify(message) + "\n"));
+          controller.close();
+        },
+      });
+      
+      return new Response(stream);
+    } else {
+      // For non-cached responses, use streamText as before
+      const result = streamText({
+        model: deepseek("deepseek-chat"),
+        messages,
+        system: systemPrompt,
+        temperature: 0.7,
+        maxTokens: 2048,
+      });
+      
+      // If this is a cacheable query, store the response for future use
+      if (cacheKey) {
+        // Instead of using onCompletion which may not be available,
+        // we'll use generateText to get the full response and cache it separately
+        // This won't affect the streaming response
+        setTimeout(async () => {
+          try {
+            const { text } = await generateText({
+              model: deepseek("deepseek-chat"),
+              messages,
+              system: systemPrompt,
+              temperature: 0.7,
+              maxTokens: 2048,
+            });
+            
+            // Cache the response
+            if (responseCache.size >= MAX_CACHE_SIZE) {
+              // Remove oldest entry if cache is full
+              let oldestKey = null;
+              let oldestTime = Date.now();
+              
+              for (const [key, value] of responseCache.entries()) {
+                if (value.timestamp < oldestTime) {
+                  oldestTime = value.timestamp;
+                  oldestKey = key;
+                }
+              }
+              
+              if (oldestKey) {
+                responseCache.delete(oldestKey);
+              }
+            }
+            
+            responseCache.set(cacheKey, {
+              timestamp: Date.now(),
+              response: text
+            });
+          } catch (error) {
+            console.error("Error caching response:", error);
+          }
+        }, 0);
+      }
+      
+      return result.toDataStreamResponse({
+        sendReasoning: false,
+      });
+    }
   } catch (error) {
     console.error("Error in chat API route:", error)
     return NextResponse.json({ error: "An error occurred while processing your request" }, { status: 500 })
