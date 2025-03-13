@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo, Suspense, lazy } from "react"
 import { useChat } from "ai/react"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,20 +17,35 @@ import {
   Crown,
   ChevronDown,
 } from "lucide-react"
-import EnhancedChatMessage from "@/components/enhanced-chat-message"
-import FileUpload from "@/components/file-upload"
-import PaymentModal from "@/components/payment-modal"
-import EnhancedTypingIndicator from "@/components/enhanced-typing-indicator"
-import VoiceInput from "@/components/voice-input"
-import EnhancedChatInput from "@/components/enhanced-chat-input"
 import { useTheme } from "next-themes"
 import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import AutoResizeTextarea from "@/components/auto-resize-textarea"
 import { debounce } from "lodash"
 
+// Lazy load non-critical components
+const EnhancedChatMessage = lazy(() => import("@/components/enhanced-chat-message"))
+const FileUpload = lazy(() => import("@/components/file-upload"))
+const PaymentModal = lazy(() => import("@/components/payment-modal"))
+const EnhancedTypingIndicator = lazy(() => import("@/components/enhanced-typing-indicator"))
+const VoiceInput = lazy(() => import("@/components/voice-input"))
+const EnhancedChatInput = lazy(() => import("@/components/enhanced-chat-input"))
+
+// Simple loading fallback component
+const LoadingFallback = () => (
+  <div className="p-4 bg-[#2A2B30] rounded-2xl animate-pulse">
+    <div className="h-4 bg-white/10 rounded w-1/4 mb-2"></div>
+    <div className="h-4 bg-white/10 rounded w-3/4 mb-2"></div>
+    <div className="h-4 bg-white/10 rounded w-1/2"></div>
+  </div>
+)
+
 // Add a utility function for local storage
 const CHAT_STORAGE_KEY = "wiser_chat_history"
+const RECENT_QUERIES_KEY = "wiser_recent_queries"
+
+// Maximum number of recent queries to store
+const MAX_RECENT_QUERIES = 10
 
 function saveChatToLocalStorage(messages: any[]) {
   if (typeof window === 'undefined') return
@@ -50,6 +65,39 @@ function loadChatFromLocalStorage() {
     return stored ? JSON.parse(stored) : []
   } catch (error) {
     console.error("Error loading chat from local storage:", error)
+    return []
+  }
+}
+
+// Store recent queries for quick suggestions
+function saveRecentQuery(query: string) {
+  if (typeof window === 'undefined' || !query.trim()) return
+  try {
+    const stored = localStorage.getItem(RECENT_QUERIES_KEY)
+    const queries = stored ? JSON.parse(stored) : []
+    
+    // Only add if not already in the list
+    if (!queries.includes(query)) {
+      // Add to the beginning and limit size
+      queries.unshift(query)
+      if (queries.length > MAX_RECENT_QUERIES) {
+        queries.pop()
+      }
+      localStorage.setItem(RECENT_QUERIES_KEY, JSON.stringify(queries))
+    }
+  } catch (error) {
+    console.error("Error saving recent query:", error)
+  }
+}
+
+// Load recent queries for suggestions
+function loadRecentQueries(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem(RECENT_QUERIES_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch (error) {
+    console.error("Error loading recent queries:", error)
     return []
   }
 }
@@ -75,6 +123,10 @@ export default function ChatPage() {
   const [inputDraft, setInputDraft] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [storedMessages, setStoredMessages] = useState<any[]>([])
+  const [recentQueries, setRecentQueries] = useState<string[]>([])
+  const [showRecentQueries, setShowRecentQueries] = useState(false)
+  const [optimisticResponse, setOptimisticResponse] = useState<string | null>(null)
+  const [isOptimisticLoading, setIsOptimisticLoading] = useState(false)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, error, setMessages, reload } = useChat({
     api: "/api/chat",
@@ -91,6 +143,8 @@ export default function ChatPage() {
         })
       }
       setShowWelcome(false)
+      setIsOptimisticLoading(false)
+      setOptimisticResponse(null)
     },
     onError: (error) => {
       toast({
@@ -98,7 +152,17 @@ export default function ChatPage() {
         description: error.message,
         variant: "destructive",
       })
+      setIsOptimisticLoading(false)
+      setOptimisticResponse(null)
     },
+    onFinish: () => {
+      // Save the query to recent queries
+      if (input.trim()) {
+        saveRecentQuery(input.trim())
+        // Update the recent queries state
+        setRecentQueries(loadRecentQueries())
+      }
+    }
   })
 
   // Create a debounced version of handleInputChange
@@ -117,13 +181,16 @@ export default function ChatPage() {
     debouncedInputChange(e)
   }
 
-  // Load chat history from local storage on initial render
+  // Load chat history and recent queries from local storage on initial render
   useEffect(() => {
     const loadedMessages = loadChatFromLocalStorage()
     if (loadedMessages.length > 0) {
       setMessages(loadedMessages)
       setShowWelcome(false)
     }
+    
+    // Load recent queries
+    setRecentQueries(loadRecentQueries())
   }, [setMessages])
 
   // Save chat history to local storage when messages change
@@ -193,6 +260,15 @@ export default function ChatPage() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // Preload components when user starts typing
+  useEffect(() => {
+    if (input.trim()) {
+      // Preload components that will be needed after submission
+      import("@/components/enhanced-chat-message")
+      import("@/components/enhanced-typing-indicator")
+    }
+  }, [input])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -371,6 +447,44 @@ export default function ChatPage() {
     }
   }
 
+  // Generate optimistic response based on the query
+  const generateOptimisticResponse = (query: string): string => {
+    // Simple pattern matching for common queries
+    const lowerQuery = query.toLowerCase()
+    
+    if (lowerQuery.includes('hello') || lowerQuery.includes('hi')) {
+      return language === "en" 
+        ? "Hello! How can I assist you today?"
+        : "হ্যালো! আমি আপনাকে কীভাবে সাহায্য করতে পারি?";
+    }
+    
+    if (lowerQuery.includes('thank')) {
+      return language === "en"
+        ? "You're welcome! Is there anything else I can help with?"
+        : "আপনাকে স্বাগতম! আমি কি আপনাকে আর কিছু সাহায্য করতে পারি?";
+    }
+    
+    // Default optimistic response
+    return language === "en"
+      ? "I'm processing your request..."
+      : "আমি আপনার অনুরোধ প্রক্রিয়া করছি...";
+  }
+
+  // Enhanced submit handler with optimistic UI
+  const handleEnhancedSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    
+    if (!input.trim() || isLoading) return
+    
+    // Generate optimistic response
+    const optimistic = generateOptimisticResponse(input)
+    setOptimisticResponse(optimistic)
+    setIsOptimisticLoading(true)
+    
+    // Submit the form
+    handleSubmit(e)
+  }
+
   // Translations
   const translations = {
     en: {
@@ -407,7 +521,7 @@ export default function ChatPage() {
     },
   }
 
-  const t = translations[language]
+  const t = useMemo(() => translations[language], [language])
 
   // Action buttons
   const actions = [
@@ -550,7 +664,7 @@ export default function ChatPage() {
 
               {/* Input area */}
               <motion.div className="w-full max-w-2xl mb-8" variants={itemVariants}>
-                <form onSubmit={handleSubmit} className="w-full">
+                <form onSubmit={handleEnhancedSubmit} className="w-full">
                   <motion.div
                     className={`relative bg-white/5 backdrop-blur-md rounded-2xl p-4 border ${isFocused ? "border-blue-500/30" : "border-white/10"} transition-all duration-300`}
                     animate={{ boxShadow: isFocused ? "0 0 20px rgba(59, 130, 246, 0.1)" : "0 0 0 rgba(0, 0, 0, 0)" }}
@@ -680,18 +794,21 @@ export default function ChatPage() {
                         delay: index * 0.05,
                       }}
                     >
-                      <EnhancedChatMessage
-                        message={message}
-                        language={language}
-                        onRegenerate={message.role === "assistant" ? handleRegenerateMessage : undefined}
-                        onCopy={handleCopyMessage}
-                        isLastMessage={index === messages.length - 1 && message.role === "assistant"}
-                      />
+                      <Suspense fallback={<LoadingFallback />}>
+                        <EnhancedChatMessage
+                          message={message}
+                          language={language}
+                          onRegenerate={message.role === "assistant" ? handleRegenerateMessage : undefined}
+                          onCopy={handleCopyMessage}
+                          isLastMessage={index === messages.length - 1 && message.role === "assistant"}
+                        />
+                      </Suspense>
                     </motion.div>
                   ))}
                 </AnimatePresence>
 
-                {isLoading && (
+                {/* Optimistic response */}
+                {isOptimisticLoading && optimisticResponse && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -700,7 +817,33 @@ export default function ChatPage() {
                     className="max-w-3xl mx-auto py-4"
                   >
                     <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
-                      <EnhancedTypingIndicator variant="modern" />
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-xs opacity-70">
+                          {language === "en" ? "Wiser" : "ওয়াইজার"}
+                        </span>
+                      </div>
+                      <div className="prose prose-invert max-w-none">
+                        <p>{optimisticResponse}</p>
+                        <div className="mt-2 h-4 w-full bg-white/5 rounded animate-pulse"></div>
+                        <div className="mt-2 h-4 w-3/4 bg-white/5 rounded animate-pulse"></div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Regular loading indicator */}
+                {isLoading && !isOptimisticLoading && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="max-w-3xl mx-auto py-4"
+                  >
+                    <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
+                      <Suspense fallback={<div className="h-6 bg-white/10 rounded w-24 animate-pulse"></div>}>
+                        <EnhancedTypingIndicator variant="modern" />
+                      </Suspense>
                       
                       <motion.div 
                         className="mt-3 flex justify-center"
@@ -807,7 +950,9 @@ export default function ChatPage() {
                 <div className="max-w-3xl mx-auto">
                   {isVoiceInputActive ? (
                     <div className="flex items-center justify-center p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-                      <VoiceInput onTranscription={handleVoiceInput} language={language} />
+                      <Suspense fallback={<div className="h-10 bg-white/10 rounded w-full animate-pulse"></div>}>
+                        <VoiceInput onTranscription={handleVoiceInput} language={language} />
+                      </Suspense>
                       <Button
                         type="button"
                         variant="outline"
@@ -819,19 +964,56 @@ export default function ChatPage() {
                       </Button>
                     </div>
                   ) : (
-                    <EnhancedChatInput
-                      input={inputDraft || input}
-                      handleInputChange={handleDebouncedInputChange}
-                      handleSubmit={handleSubmit}
-                      isLoading={isLoading || isTyping}
-                      onVoiceInputToggle={handleVoiceInputToggle}
-                      onFileUploadToggle={() => setShowFileUpload(!showFileUpload)}
-                      isVoiceInputActive={isVoiceInputActive}
-                      language={language}
-                      suggestions={actions.map(action => ({ icon: action.icon, text: action.text }))}
-                      onSuggestionClick={handlePromptSelect}
-                      maxLength={4000}
-                    />
+                    <div className="relative">
+                      <form onSubmit={handleEnhancedSubmit} className="w-full">
+                        <Suspense fallback={<div className="h-16 bg-white/5 rounded-2xl w-full animate-pulse"></div>}>
+                          <EnhancedChatInput
+                            input={inputDraft || input}
+                            handleInputChange={handleDebouncedInputChange}
+                            handleSubmit={handleEnhancedSubmit}
+                            isLoading={isLoading || isTyping}
+                            onVoiceInputToggle={handleVoiceInputToggle}
+                            onFileUploadToggle={() => setShowFileUpload(!showFileUpload)}
+                            isVoiceInputActive={isVoiceInputActive}
+                            language={language}
+                            suggestions={actions.map(action => ({ icon: action.icon, text: action.text }))}
+                            onSuggestionClick={handlePromptSelect}
+                            maxLength={4000}
+                            onFocus={() => setShowRecentQueries(true)}
+                            onBlur={() => setTimeout(() => setShowRecentQueries(false), 200)}
+                          />
+                        </Suspense>
+                      </form>
+                      
+                      {/* Recent queries dropdown */}
+                      <AnimatePresence>
+                        {showRecentQueries && recentQueries.length > 0 && !input.trim() && (
+                          <motion.div
+                            className="absolute bottom-full left-0 right-0 mb-2 bg-[#2A2B30] rounded-lg shadow-lg border border-white/10 overflow-hidden"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="p-2 text-xs text-white/50">
+                              {language === "en" ? "Recent queries" : "সাম্প্রতিক প্রশ্ন"}
+                            </div>
+                            {recentQueries.map((query, index) => (
+                              <div
+                                key={index}
+                                className="px-4 py-2 hover:bg-white/5 cursor-pointer text-sm truncate"
+                                onClick={() => {
+                                  handleInputChange({ target: { value: query } } as React.ChangeEvent<HTMLTextAreaElement>)
+                                  setShowRecentQueries(false)
+                                }}
+                              >
+                                {query}
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   )}
 
                   <div className="flex justify-between items-center mt-2">
@@ -864,14 +1046,16 @@ export default function ChatPage() {
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             >
               <div className="max-w-md mx-auto">
-                <FileUpload
-                  onFileSelect={handleFileSelect}
-                  onClear={handleFileClear}
-                  language={language}
-                  selectedFile={selectedFile}
-                  isUploading={isUploading}
-                  uploadProgress={uploadProgress}
-                />
+                <Suspense fallback={<div className="h-32 bg-white/5 rounded-2xl w-full animate-pulse"></div>}>
+                  <FileUpload
+                    onFileSelect={handleFileSelect}
+                    onClear={handleFileClear}
+                    language={language}
+                    selectedFile={selectedFile}
+                    isUploading={isUploading}
+                    uploadProgress={uploadProgress}
+                  />
+                </Suspense>
               </div>
             </motion.div>
           )}
@@ -879,7 +1063,9 @@ export default function ChatPage() {
       </div>
 
       {/* Payment Modal */}
-      <PaymentModal open={showPaymentModal} onOpenChange={setShowPaymentModal} language={language} />
+      <Suspense fallback={null}>
+        <PaymentModal open={showPaymentModal} onOpenChange={setShowPaymentModal} language={language} />
+      </Suspense>
     </main>
   )
 }

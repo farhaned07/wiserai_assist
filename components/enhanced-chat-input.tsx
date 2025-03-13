@@ -20,6 +20,8 @@ interface EnhancedChatInputProps {
   onSuggestionClick?: (suggestion: string) => void
   disabled?: boolean
   maxLength?: number
+  onFocus?: () => void
+  onBlur?: () => void
 }
 
 export default function EnhancedChatInput({
@@ -35,6 +37,8 @@ export default function EnhancedChatInput({
   onSuggestionClick,
   disabled = false,
   maxLength = 4000,
+  onFocus,
+  onBlur,
 }: EnhancedChatInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -144,6 +148,17 @@ export default function EnhancedChatInput({
     visible: { opacity: 1, y: 0, height: "auto" },
   }
 
+  // Handle focus and blur events
+  const handleFocus = () => {
+    setIsFocused(true)
+    if (onFocus) onFocus()
+  }
+
+  const handleBlur = () => {
+    setIsFocused(false)
+    if (onBlur) onBlur()
+  }
+
   return (
     <div className="w-full">
       <form ref={formRef} onSubmit={handleSubmit} className="w-full">
@@ -175,8 +190,8 @@ export default function EnhancedChatInput({
             onChange={handleInputChange}
             placeholder={t.placeholder}
             className="w-full px-4 py-3 bg-transparent border-0 focus:ring-0 text-lg resize-none"
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             maxRows={6}
             showCharCount={true}
             maxLength={maxLength}
