@@ -48,6 +48,13 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
 
   // Memoize the message content to prevent unnecessary re-renders
   const messageContent = message.content;
+  
+  // Check if the message has a structured format (contains headings or lists)
+  const isStructured = !isUser && (
+    messageContent.includes('##') || 
+    messageContent.includes('- ') || 
+    messageContent.includes('1. ')
+  );
 
   // Animation on mount
   useEffect(() => {
@@ -280,6 +287,13 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
           <span className="font-medium text-xs opacity-70">
             {isUser ? t.you : t.ai}
           </span>
+          
+          {/* Show structured indicator for AI messages with structure */}
+          {isStructured && !isUser && (
+            <span className="text-xs bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-full">
+              Structured
+            </span>
+          )}
           
           {/* Show feedback thank you message */}
           <AnimatePresence>

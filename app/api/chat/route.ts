@@ -53,6 +53,13 @@ export async function POST(req: Request) {
 - Provide accurate information about local customs, traditions, and practices
 - Stay neutral on sensitive political topics while providing factual information
 
+## Response Structure
+- Always begin with a direct answer to the user's question in 1-2 sentences
+- Use clear headings (##) to organize longer responses into sections
+- For complex topics, use bullet points or numbered lists
+- Include a brief conclusion or summary for longer responses
+- Limit responses to 3-5 key points maximum
+
 ## Response Style
 - Use clear, concise language appropriate for the user's proficiency level
 - Format responses with Markdown for readability (headings, lists, bold for emphasis)
@@ -67,9 +74,10 @@ export async function POST(req: Request) {
 - Prioritize helpfulness and relevance above all
 
 ## Response Length
-- Keep responses concise and to the point
-- Avoid unnecessary verbosity
-- Focus on the most relevant information first`
+- Keep responses concise and to the point (under 250 words when possible)
+- Avoid unnecessary verbosity and repetition
+- Focus on the most relevant information first
+- For complex questions, provide a brief answer followed by structured details`
 
     // Check cache for common queries
     const cacheKey = generateCacheKey(messages);
@@ -108,8 +116,8 @@ export async function POST(req: Request) {
         model: deepseek("deepseek-chat"),
         messages,
         system: systemPrompt,
-        temperature: 0.7,
-        maxTokens: 1024, // Reduced from 2048 for faster responses
+        temperature: 0.6, // Reduced from 0.7 for more focused responses
+        maxTokens: 800, // Reduced from 1024 for more concise responses
       });
       
       // If this is a cacheable query, store the response for future use
@@ -123,8 +131,8 @@ export async function POST(req: Request) {
               model: deepseek("deepseek-chat"),
               messages,
               system: systemPrompt,
-              temperature: 0.7,
-              maxTokens: 1024, // Reduced from 2048 for faster responses
+              temperature: 0.6, // Reduced from 0.7 for more focused responses
+              maxTokens: 800, // Reduced from 1024 for more concise responses
             });
             
             // Cache the response

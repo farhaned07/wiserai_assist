@@ -246,6 +246,13 @@ export default function ChatPage() {
   }
 
   const handlePromptSelect = (prompt: string) => {
+    // For structured response, add a prefix if it's just the button text
+    if (prompt === t.structured) {
+      prompt = language === "en" 
+        ? "Provide a structured response about " 
+        : "এটি সম্পর্কে একটি কাঠামোগত প্রতিক্রিয়া দিন ";
+    }
+    
     handleInputChange({ target: { value: prompt } } as React.ChangeEvent<HTMLTextAreaElement>)
   }
 
@@ -266,6 +273,9 @@ export default function ChatPage() {
         break
       case "code":
         prompt = `${language === "en" ? "Write code for this: " : "এটির জন্য কোড লিখুন: "}${selectedText}`
+        break
+      case "structured":
+        prompt = `${language === "en" ? "Provide a structured response about: " : "এটি সম্পর্কে একটি কাঠামোগত প্রতিক্রিয়া দিন: "}${selectedText}`
         break
     }
     
@@ -312,6 +322,7 @@ export default function ChatPage() {
       summarize: "Summarize",
       translate: "Translate",
       code: "Write code",
+      structured: "Structured response",
       stopVoice: "Stop voice",
       clearChat: "Clear chat",
       terms: "Wiser AI may produce inaccurate information about people, places, or facts.",
@@ -327,6 +338,7 @@ export default function ChatPage() {
       summarize: "সারাংশ",
       translate: "অনুবাদ করুন",
       code: "কোড লিখুন",
+      structured: "কাঠামোগত প্রতিক্রিয়া",
       stopVoice: "ভয়েস বন্ধ করুন",
       clearChat: "চ্যাট মুছুন",
       terms: "ওয়াইজার এআই মানুষ, স্থান বা তথ্য সম্পর্কে অসঠিক তথ্য উৎপন্ন করতে পারে।",
@@ -342,6 +354,7 @@ export default function ChatPage() {
     { icon: <HelpCircle size={18} />, text: t.summarize },
     { icon: <BarChart3 size={18} />, text: t.translate },
     { icon: <Code size={18} />, text: t.code },
+    { icon: <Lightbulb size={18} />, text: t.structured },
   ]
 
   // Animation variants
