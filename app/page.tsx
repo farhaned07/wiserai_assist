@@ -450,13 +450,17 @@ export default function ChatPage() {
     <main className="flex flex-col h-screen bg-[#1A1B1E] overflow-hidden">
       {/* Minimal Header */}
       <motion.header
-        className="flex justify-between items-center p-4 border-b border-white/5"
+        className="flex justify-between items-center p-4 border-b border-white/5 bg-[#1A1B1E]/90 backdrop-blur-lg sticky top-0 z-50 shadow-glow-enhanced"
         initial="hidden"
         animate="visible"
         variants={headerVariants}
       >
-        <motion.div className="flex items-center gap-2" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <span className="text-xl font-semibold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+        <motion.div 
+          className="flex items-center gap-2" 
+          whileHover={{ scale: 1.02 }} 
+          whileTap={{ scale: 0.98 }}
+        >
+          <span className="text-xl font-semibold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent hover:from-blue-500 hover:via-indigo-600 hover:to-purple-600 transition-all duration-300">
             wiser
           </span>
         </motion.div>
@@ -466,7 +470,7 @@ export default function ChatPage() {
               variant="ghost"
               size="icon"
               onClick={toggleLanguage}
-              className="rounded-full bg-white/5 hover:bg-white/10"
+              className="rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 shadow-glow"
             >
               {language === "en" ? "বাং" : "EN"}
             </Button>
@@ -476,11 +480,22 @@ export default function ChatPage() {
               variant="ghost"
               size="icon"
               onClick={() => setShowPaymentModal(true)}
-              className="rounded-full bg-white/5 hover:bg-white/10 relative"
+              className="rounded-full bg-white/5 hover:bg-white/10 hover:text-yellow-400 transition-all duration-300 shadow-glow relative"
               title={language === "en" ? "Premium subscription" : "প্রিমিয়াম সাবস্ক্রিপশন"}
             >
               <Crown size={18} className="text-yellow-400" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
+              <motion.span 
+                className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
             </Button>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -488,7 +503,7 @@ export default function ChatPage() {
               variant="ghost"
               size="icon"
               onClick={() => setShowSettingsDialog(!showSettingsDialog)}
-              className="rounded-full bg-white/5 hover:bg-white/10"
+              className="rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 shadow-glow"
             >
               <Settings size={18} />
             </Button>

@@ -175,14 +175,11 @@
 }
 
 @keyframes glow {
-  0% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+  0%, 100% {
+    filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.3));
   }
   50% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+    filter: drop-shadow(0 0 25px rgba(59, 130, 246, 0.5));
   }
 }
 
@@ -214,36 +211,42 @@
 
 /* Markdown styling */
 .markdown {
-  @apply text-foreground;
+  @apply text-foreground/90;
+  letter-spacing: -0.011em;
 }
 
 .markdown p {
-  @apply mb-4;
+  @apply mb-5 leading-[1.75];
+  letter-spacing: -0.011em;
 }
 
 .markdown h1,
 .markdown h2,
 .markdown h3,
 .markdown h4 {
-  @apply font-medium mb-2 mt-4;
-  letter-spacing: -0.02em;
+  @apply font-medium mb-4 mt-8;
+  letter-spacing: -0.022em;
 }
 
 .markdown h1 {
-  @apply text-2xl;
+  @apply text-2xl text-foreground/95 leading-[1.3];
 }
 
 .markdown h2 {
-  @apply text-xl;
+  @apply text-xl text-foreground/90 leading-[1.35];
 }
 
 .markdown h3 {
-  @apply text-lg;
+  @apply text-lg text-foreground/90 leading-[1.4];
 }
 
 .markdown ul,
 .markdown ol {
-  @apply pl-6 mb-4;
+  @apply pl-6 mb-5 space-y-2.5;
+}
+
+.markdown li {
+  @apply leading-[1.7];
 }
 
 .markdown ul {
@@ -255,23 +258,29 @@
 }
 
 .markdown pre {
-  @apply bg-black/30 p-3 rounded-xl my-3 overflow-x-auto;
+  @apply bg-black/15 backdrop-blur-sm p-5 rounded-xl my-5 overflow-x-auto;
+  box-shadow: inset 0 0 0.5px rgba(255, 255, 255, 0.1);
 }
 
 .markdown code {
-  @apply bg-black/30 px-1.5 py-0.5 rounded-lg text-sm;
+  @apply bg-black/15 backdrop-blur-sm px-1.5 py-0.5 rounded-md text-[0.925em];
+  box-shadow: inset 0 0 0.5px rgba(255, 255, 255, 0.1);
+  letter-spacing: -0.01em;
 }
 
 .markdown pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 shadow-none leading-[1.75];
 }
 
 .markdown a {
-  @apply text-blue-400 underline;
+  @apply text-blue-400/90 underline decoration-blue-400/20 hover:decoration-blue-400/40 transition-all duration-200;
+  text-underline-offset: 2px;
 }
 
 .markdown blockquote {
-  @apply border-l-4 border-blue-400/30 pl-4 italic my-4;
+  @apply border-l-2 border-blue-400/20 pl-4 my-5 text-foreground/75 leading-[1.7];
+  font-style: normal;
+  letter-spacing: -0.011em;
 }
 
 /* Button hover effects */
@@ -299,7 +308,7 @@ button:active {
 
 /* Improved chat container */
 .chat-container {
-  @apply flex flex-col space-y-4 pb-20;
+  @apply flex flex-col space-y-10 pb-28;
   scroll-behavior: smooth;
   overscroll-behavior: contain;
 }
@@ -323,17 +332,26 @@ button:active {
 
 /* Shadow glow effect for focused elements */
 .shadow-glow {
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2),
+              0 0 8px rgba(255, 255, 255, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.shadow-glow:hover {
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.3), 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 /* Enhanced shadow glow effect for floating elements */
 .shadow-glow-floating {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4),
+              0 0 16px rgba(255, 255, 255, 0.2),
+              0 0 4px rgba(255, 255, 255, 0.1);
+  animation: float 6s ease-in-out infinite;
   transition: box-shadow 0.3s ease;
 }
 
 .shadow-glow-floating:hover {
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.3);
 }
 
 /* Hide scrollbar for elements with class scrollbar-hide */
@@ -359,20 +377,17 @@ button:active {
 
 /* Text selection styling */
 ::selection {
-  background-color: rgba(59, 130, 246, 0.3);
-  color: inherit;
+  background: rgba(59, 130, 246, 0.3);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
 }
 
 /* Floating element animations */
 @keyframes float {
-  0% {
-    transform: translateY(0px);
+  0%, 100% {
+    transform: translateY(0);
   }
   50% {
     transform: translateY(-5px);
-  }
-  100% {
-    transform: translateY(0px);
   }
 }
 
@@ -410,52 +425,59 @@ button:active {
 
 /* Minimized chat input styles */
 .minimized-chat {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 50;
-  border-radius: 9999px;
+  @apply bg-gradient-to-br from-[#2A2B30]/60 to-[#1F2023]/60 backdrop-blur-sm rounded-2xl border border-white/5;
+  border-radius: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .minimized-chat:hover {
-  transform: scale(1.05);
+  @apply border-white/10;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 /* Expanded chat input styles */
 .expanded-chat {
-  @apply bg-background/80 backdrop-blur-md border border-white/10;
+  @apply bg-gradient-to-br from-[#2A2B30]/80 to-[#1F2023]/80 backdrop-blur-md rounded-2xl border border-white/10;
   border-radius: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
+.expanded-chat:focus-within {
+  @apply border-blue-500/30;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
 /* Quick action menu styles */
 .quick-action-menu {
-  @apply bg-background/80 backdrop-blur-md border border-white/10 rounded-full;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
+  @apply backdrop-blur-md border border-white/5 rounded-full;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .quick-action-menu:hover {
-  @apply border-blue-500/30;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 0 10px rgba(59, 130, 246, 0.2);
+  @apply border-blue-500/20;
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(59, 130, 246, 0.1);
 }
 
 /* Tooltip animations */
+.tooltip-animation {
+  animation: tooltipFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: scale(0.97) translateY(5px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
   }
-}
-
-.tooltip-animation {
-  animation: tooltipFadeIn 0.2s ease-out forwards;
 }
 
 /* Improved chat message selection */
@@ -465,12 +487,27 @@ button:active {
 
 .chat-message::selection,
 .chat-message *::selection {
-  background-color: rgba(59, 130, 246, 0.3);
+  @apply bg-blue-500/15 text-inherit;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
 /* Gradient text */
 .gradient-text {
-  @apply bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500;
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Glow effect */
@@ -487,19 +524,17 @@ button:active {
   transform: translateY(-2px);
 }
 
-/* Shadow glow effect for focused elements */
-.shadow-glow {
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
-}
-
 /* Enhanced shadow glow effect for elements */
 .shadow-glow-enhanced {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(59, 130, 246, 0.2);
-  transition: box-shadow 0.3s ease;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3),
+              0 0 12px rgba(255, 255, 255, 0.15),
+              0 0 2px rgba(255, 255, 255, 0.1);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .shadow-glow-enhanced:hover {
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4), 0 0 16px rgba(255, 255, 255, 0.2), 0 0 4px rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 /* Import react-day-picker styles */
@@ -513,5 +548,26 @@ button:active {
   --rdp-outline: 2px solid var(--rdp-accent-color); /* Outline for focused elements */
   --rdp-outline-selected: 2px solid hsl(var(--primary)); /* Outline for focused _and_ selected elements */
   --rdp-selected-color: hsl(var(--primary-foreground)); /* Color for selected day text */
+}
+
+/* Scrollbar styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply bg-white/5 rounded-full;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/10;
 }
 

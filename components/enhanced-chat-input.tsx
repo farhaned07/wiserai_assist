@@ -6,6 +6,7 @@ import { Search, Lightbulb, Mic, Paperclip, ArrowUp, Sparkles } from "lucide-rea
 import { motion, AnimatePresence } from "framer-motion"
 import AutoResizeTextarea from "@/components/auto-resize-textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 interface EnhancedChatInputProps {
   input: string
@@ -48,14 +49,20 @@ export default function EnhancedChatInput({
       deepsearch: "Deep search",
       think: "Think step by step",
       sendMessage: "Send message",
-      shortcuts: "Keyboard shortcuts: Ctrl+Enter to send"
+      shortcuts: "Keyboard shortcuts: Ctrl+Enter to send",
+      startRecording: "Start recording",
+      stopRecording: "Stop recording",
+      attachFile: "Attach file"
     },
     bn: {
       placeholder: "আমাকে যেকোনো প্রশ্ন করুন...",
       deepsearch: "গভীর অনুসন্ধান",
       think: "ধাপে ধাপে চিন্তা করুন",
       sendMessage: "বার্তা পাঠান",
-      shortcuts: "কীবোর্ড শর্টকাট: পাঠাতে Ctrl+Enter"
+      shortcuts: "কীবোর্ড শর্টকাট: পাঠাতে Ctrl+Enter",
+      startRecording: "অনুসন্ধান শুরু করুন",
+      stopRecording: "অনুসন্ধান শেষ করুন",
+      attachFile: "ফাইল সংযোগ করুন"
     },
   }[language]
 
@@ -125,84 +132,93 @@ export default function EnhancedChatInput({
     <div className="w-full">
       <form ref={formRef} onSubmit={handleSubmit} className="w-full">
         <motion.div
-          className="relative bg-white/5 backdrop-blur-md rounded-2xl p-4 border transition-all duration-300"
+          className={cn(
+            "relative flex flex-col w-full max-w-3xl mx-auto",
+            isFocused ? "expanded-chat shadow-glow-enhanced" : "minimized-chat shadow-glow",
+            "transition-all duration-300 ease-in-out transform",
+            isFocused ? "scale-[1.02]" : "scale-100"
+          )}
           variants={containerVariants}
-          animate={isFocused ? "focused" : "unfocused"}
-          initial="unfocused"
+          initial="hidden"
+          animate="visible"
+          transition={{ duration: 0.3 }}
         >
-          <AutoResizeTextarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleInputChange}
-            placeholder={t.placeholder}
-            className="w-full px-4 py-3 bg-transparent border-0 focus:ring-0 text-lg resize-none"
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            maxRows={6}
-            showCharCount={true}
-            maxLength={maxLength}
-            animateHeight={false}
-            disabled={disabled || isLoading}
-          />
-
-          <div className="flex items-center mt-3">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-full bg-white/5 hover:bg-white/10 transition-colors duration-300"
-                  onClick={() => handleSuggestionClick(t.deepsearch)}
-                  disabled={disabled || isLoading}
-                >
-                  <Search size={16} className="mr-2" />
-                  {t.deepsearch}
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-full bg-white/5 hover:bg-white/10 transition-colors duration-300"
-                  onClick={() => handleSuggestionClick(t.think)}
-                  disabled={disabled || isLoading}
-                >
-                  <Lightbulb size={16} className="mr-2" />
-                  {t.think}
-                </Button>
-              </motion.div>
-            </div>
-
-            <div className="flex-1"></div>
+          <div className="flex items-end gap-2 p-2">
+            <AutoResizeTextarea
+              value={input}
+              onChange={handleInputChange}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder={t.placeholder}
+              maxLength={maxLength}
+              disabled={disabled || isLoading}
+              className={cn(
+                "flex-1 min-h-[44px] max-h-[200px] bg-transparent border-0 focus:ring-0 resize-none",
+                "placeholder:text-muted-foreground/50 text-sm sm:text-base",
+                "scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent",
+                "transition-all duration-300 ease-in-out",
+                "focus:placeholder:text-muted-foreground/70",
+                disabled && "opacity-50 cursor-not-allowed"
+              )}
+            />
 
             <div className="flex items-center gap-2">
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10"
-                  onClick={onVoiceInputToggle}
-                  disabled={disabled || isLoading}
-                >
-                  <Mic size={16} />
-                </Button>
-              </motion.div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.div 
+                      whileHover={{ scale: 1.1 }} 
+                      whileTap={{ scale: 0.9 }}
+                      className="shadow-glow"
+                    >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          "h-8 w-8 rounded-full bg-white/5",
+                          "hover:bg-white/10 hover:text-blue-400 transition-all duration-300",
+                          "transform hover:scale-105",
+                          isVoiceInputActive && "text-red-400 hover:text-red-500 animate-pulse"
+                        )}
+                        onClick={onVoiceInputToggle}
+                        disabled={disabled || isLoading}
+                      >
+                        <Mic size={16} className={isVoiceInputActive ? "animate-bounce" : ""} />
+                      </Button>
+                    </motion.div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="tooltip-animation">
+                    <p>{isVoiceInputActive ? t.stopRecording : t.startRecording}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10"
-                  onClick={onFileUploadToggle}
-                  disabled={disabled || isLoading}
-                >
-                  <Paperclip size={16} />
-                </Button>
-              </motion.div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.div 
+                      whileHover={{ scale: 1.1 }} 
+                      whileTap={{ scale: 0.9 }}
+                      className="shadow-glow"
+                    >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 transform hover:scale-105"
+                        onClick={onFileUploadToggle}
+                        disabled={disabled || isLoading}
+                      >
+                        <Paperclip size={16} />
+                      </Button>
+                    </motion.div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="tooltip-animation">
+                    <p>{t.attachFile}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               <TooltipProvider>
                 <Tooltip>
@@ -212,24 +228,52 @@ export default function EnhancedChatInput({
                       animate={input.trim() && !isLoading ? "active" : "inactive"}
                       whileHover={input.trim() && !isLoading ? { scale: 1.1 } : {}}
                       whileTap={input.trim() && !isLoading ? { scale: 0.9 } : {}}
+                      className="shadow-glow"
                     >
                       <Button
                         type="submit"
                         size="icon"
                         disabled={isLoading || !input.trim() || disabled}
-                        className="h-8 w-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-300"
+                        className={cn(
+                          "h-8 w-8 rounded-full",
+                          "bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500",
+                          "hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600",
+                          "text-white shadow-lg transition-all duration-300",
+                          "transform hover:scale-105",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                          "disabled:hover:from-blue-500 disabled:hover:via-indigo-500 disabled:hover:to-purple-500"
+                        )}
                       >
-                        <ArrowUp size={16} />
+                        <ArrowUp size={16} className={isLoading ? "animate-bounce" : ""} />
                       </Button>
                     </motion.div>
                   </TooltipTrigger>
-                  <TooltipContent>
+                  <TooltipContent side="top" className="tooltip-animation">
                     <p>{t.sendMessage} (Ctrl+Enter)</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
           </div>
+
+          {/* Character count */}
+          {input.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              transition={{ duration: 0.2 }}
+              className="absolute bottom-1 right-24 text-xs text-muted-foreground/70"
+            >
+              <span className={cn(
+                input.length > maxLength * 0.9 && "text-yellow-400",
+                input.length >= maxLength && "text-red-400"
+              )}>
+                {input.length}
+              </span>
+              /{maxLength}
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Suggestions */}
