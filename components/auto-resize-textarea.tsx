@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useRef, useEffect, useState, forwardRef } from "react"
+import { useRef, useEffect, useState, forwardRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 
@@ -13,6 +13,16 @@ interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextA
   showCharCount?: boolean
   maxLength?: number
   animateHeight?: boolean
+}
+
+// Debounce function to limit how often a function is called
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+  
+  return function(...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
 }
 
 const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeTextareaProps>(
@@ -45,7 +55,8 @@ const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeTextareaPro
       }
     }
 
-    const resizeTextarea = () => {
+    // Memoize the resize function with useCallback
+    const resizeTextarea = useCallback(() => {
       const textarea = textareaRef.current
       if (!textarea) return
 
@@ -70,17 +81,21 @@ const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeTextareaPro
       
       // Update character count
       setCharCount(value.length)
-    }
+    }, [minRows, maxRows, animateHeight, value.length]);
+
+    // Create a debounced version of resizeTextarea
+    const debouncedResize = useCallback(debounce(resizeTextarea, 10), [resizeTextarea]);
 
     // Resize on value change
     useEffect(() => {
-      resizeTextarea()
-    }, [value])
+      debouncedResize();
+    }, [value, debouncedResize]);
 
     // Initial resize
     useEffect(() => {
-      resizeTextarea()
-    }, [])
+      resizeTextarea();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Apply animated height
     useEffect(() => {

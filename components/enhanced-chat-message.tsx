@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback, memo } from "react"
 import type { Message } from "ai"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -25,7 +25,8 @@ interface EnhancedChatMessageProps {
   isLastMessage?: boolean
 }
 
-export default function EnhancedChatMessage({
+// Memoized component to prevent unnecessary re-renders
+const EnhancedChatMessage = memo(function EnhancedChatMessage({
   message,
   language,
   isLoading = false,
@@ -43,6 +44,9 @@ export default function EnhancedChatMessage({
   const [showQuickActions, setShowQuickActions] = useState(false)
   const [quickActionPosition, setQuickActionPosition] = useState({ x: 0, y: 0 })
   const [feedback, setFeedback] = useState<"none" | "positive" | "negative">("none")
+
+  // Memoize the message content to prevent unnecessary re-renders
+  const messageContent = message.content;
 
   // Animation on mount
   useEffect(() => {
@@ -251,174 +255,170 @@ export default function EnhancedChatMessage({
   return (
     <motion.div
       ref={messageRef}
-      className={cn("max-w-3xl mx-auto py-4 chat-message", isUser ? "text-right" : "text-left")}
-      initial="hidden"
-      animate={isVisible ? "visible" : "hidden"}
-      variants={messageVariants}
+      className={cn(
+        "group relative px-4 py-3 rounded-2xl transition-all duration-300",
+        isUser
+          ? "bg-user text-user-foreground ml-auto max-w-[85%] sm:max-w-[75%]"
+          : "bg-assistant text-assistant-foreground mr-auto max-w-[85%] sm:max-w-[75%]",
+        isVisible ? "opacity-100" : "opacity-0 translate-y-2",
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
     >
+      {/* Message content */}
+      <div className="prose prose-sm dark:prose-invert max-w-none">
+        {isUser ? (
+          <div className="whitespace-pre-wrap">{messageContent}</div>
+        ) : (
+          <MarkdownRenderer content={messageContent} />
+        )}
+      </div>
+
+      {/* Feedback indicator */}
+      <AnimatePresence>
+        {feedback !== "none" && (
+          <motion.div 
+            className="absolute top-2 right-2 text-xs bg-white/10 backdrop-blur-md rounded-full px-2 py-1 flex items-center gap-1"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+          >
+            {feedback === "positive" ? (
+              <ThumbsUp size={12} className="text-green-400" />
+            ) : (
+              <ThumbsDown size={12} className="text-red-400" />
+            )}
+            <span className="text-muted-foreground">{t.thanks}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.div
         className={cn(
-          "inline-block max-w-[80%] text-left",
-          isUser
-            ? "bg-[#2A2B30] rounded-t-2xl rounded-bl-2xl rounded-br-sm"
-            : "bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm",
-          isHovered ? "shadow-glow-floating" : ""
+          "flex items-center gap-2 px-4 py-2 border-t border-white/5",
+          isUser ? "justify-end" : "justify-between",
         )}
-        whileHover={{
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
-          y: -1,
-        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isHovered ? 1 : 0.5 }}
         transition={{ duration: 0.2 }}
       >
-        <div className="p-4 relative">
-          <MarkdownRenderer content={message.content} />
-          
-          {/* Feedback indicator */}
-          <AnimatePresence>
-            {feedback !== "none" && (
-              <motion.div 
-                className="absolute top-2 right-2 text-xs bg-white/10 backdrop-blur-md rounded-full px-2 py-1 flex items-center gap-1"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-              >
-                {feedback === "positive" ? (
-                  <ThumbsUp size={12} className="text-green-400" />
-                ) : (
-                  <ThumbsDown size={12} className="text-red-400" />
-                )}
-                <span className="text-muted-foreground">{t.thanks}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <motion.div
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 border-t border-white/5",
-            isUser ? "justify-end" : "justify-between",
-          )}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: isHovered ? 1 : 0.5 }}
-          transition={{ duration: 0.2 }}
-        >
-          {!isUser && (
-            <div className="flex items-center gap-2">
-              <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 rounded-full text-xs bg-white/5 hover:bg-white/10"
-                        onClick={() => handleFeedback("positive")}
-                        disabled={feedback !== "none"}
-                      >
-                        <ThumbsUp size={14} className={feedback === "positive" ? "text-green-400" : ""} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t.helpful}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </motion.div>
-              
-              <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 rounded-full text-xs bg-white/5 hover:bg-white/10"
-                        onClick={() => handleFeedback("negative")}
-                        disabled={feedback !== "none"}
-                      >
-                        <ThumbsDown size={14} className={feedback === "negative" ? "text-red-400" : ""} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t.notHelpful}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </motion.div>
-            </div>
-          )}
-          
+        {!isUser && (
           <div className="flex items-center gap-2">
-            {!isUser && (
-              <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 rounded-full text-xs bg-white/5 hover:bg-white/10"
-                  onClick={onRegenerate}
-                >
-                  <Sparkles size={14} className="mr-1" />
-                  {t.regenerate}
-                </Button>
-              </motion.div>
-            )}
-
+            <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-full text-xs bg-white/5 hover:bg-white/10"
+                      onClick={() => handleFeedback("positive")}
+                      disabled={feedback !== "none"}
+                    >
+                      <ThumbsUp size={14} className={feedback === "positive" ? "text-green-400" : ""} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t.helpful}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </motion.div>
+            
+            <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-full text-xs bg-white/5 hover:bg-white/10"
+                      onClick={() => handleFeedback("negative")}
+                      disabled={feedback !== "none"}
+                    >
+                      <ThumbsDown size={14} className={feedback === "negative" ? "text-red-400" : ""} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t.notHelpful}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </motion.div>
+          </div>
+        )}
+        
+        <div className="flex items-center gap-2">
+          {!isUser && (
             <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 rounded-full text-xs bg-white/5 hover:bg-white/10"
-                onClick={copyToClipboard}
+                onClick={onRegenerate}
               >
-                {copied ? <Check size={14} className="mr-1" /> : <Copy size={14} className="mr-1" />}
-                {copied ? t.copied : t.copy}
+                <Sparkles size={14} className="mr-1" />
+                {t.regenerate}
               </Button>
             </motion.div>
-            
-            <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 rounded-full text-xs bg-white/5 hover:bg-white/10 p-0"
-                  >
-                    <MoreHorizontal size={14} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-[#2A2B30] border-white/10 text-white">
-                  <DropdownMenuItem onClick={shareMessage} className="cursor-pointer">
-                    <Share size={14} className="mr-2" />
-                    <span>{t.share}</span>
-                  </DropdownMenuItem>
-                  {!isUser && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleQuickAction("explain")} className="cursor-pointer">
-                        <BookOpen size={14} className="mr-2" />
-                        <span>{t.explain}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleQuickAction("summarize")} className="cursor-pointer">
-                        <HelpCircle size={14} className="mr-2" />
-                        <span>{t.summarize}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleQuickAction("translate")} className="cursor-pointer">
-                        <BarChart3 size={14} className="mr-2" />
-                        <span>{t.translate}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleQuickAction("code")} className="cursor-pointer">
-                        <Code size={14} className="mr-2" />
-                        <span>{t.code}</span>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </motion.div>
-          </div>
-        </motion.div>
+          )}
+
+          <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 rounded-full text-xs bg-white/5 hover:bg-white/10"
+              onClick={copyToClipboard}
+            >
+              {copied ? <Check size={14} className="mr-1" /> : <Copy size={14} className="mr-1" />}
+              {copied ? t.copied : t.copy}
+            </Button>
+          </motion.div>
+          
+          <motion.div variants={buttonVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 rounded-full text-xs bg-white/5 hover:bg-white/10 p-0"
+                >
+                  <MoreHorizontal size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#2A2B30] border-white/10 text-white">
+                <DropdownMenuItem onClick={shareMessage} className="cursor-pointer">
+                  <Share size={14} className="mr-2" />
+                  <span>{t.share}</span>
+                </DropdownMenuItem>
+                {!isUser && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleQuickAction("explain")} className="cursor-pointer">
+                      <BookOpen size={14} className="mr-2" />
+                      <span>{t.explain}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleQuickAction("summarize")} className="cursor-pointer">
+                      <HelpCircle size={14} className="mr-2" />
+                      <span>{t.summarize}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleQuickAction("translate")} className="cursor-pointer">
+                      <BarChart3 size={14} className="mr-2" />
+                      <span>{t.translate}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleQuickAction("code")} className="cursor-pointer">
+                      <Code size={14} className="mr-2" />
+                      <span>{t.code}</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </motion.div>
+        </div>
       </motion.div>
       
       {/* Quick action menu for text selection */}
@@ -472,5 +472,9 @@ export default function EnhancedChatMessage({
       </AnimatePresence>
     </motion.div>
   )
-}
+})
+
+EnhancedChatMessage.displayName = "EnhancedChatMessage"
+
+export default EnhancedChatMessage
 

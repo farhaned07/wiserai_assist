@@ -3,6 +3,14 @@ import { deepseek } from "@ai-sdk/deepseek"
 import { generateText } from "ai"
 
 export const runtime = "nodejs"
+export const maxDuration = 60; // Set max duration to 60 seconds
+
+// Define maximum file size (5MB)
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+// Simple in-memory cache for file analysis
+const analysisCache = new Map<string, { timestamp: number, analysis: string }>();
+const CACHE_TTL = 3600 * 1000; // 1 hour in milliseconds
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,12 +21,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ 
+        error: "File too large. Maximum size is 5MB." 
+      }, { status: 413 })
+    }
+
     if (!process.env.DEEPSEEK_API_KEY) {
       return NextResponse.json({ error: "DeepSeek API key is not configured" }, { status: 500 })
     }
 
+    // Generate a cache key based on file name and last modified date
+    const cacheKey = `${file.name}-${file.lastModified}`;
+    
+    // Check if we have a cached analysis
+    const cachedResult = analysisCache.get(cacheKey);
+    if (cachedResult && (Date.now() - cachedResult.timestamp < CACHE_TTL)) {
+      return NextResponse.json({ analysis: cachedResult.analysis });
+    }
+
     // Read file content as text
-    const fileContent = await file.text()
+    let fileContent: string;
+    try {
+      fileContent = await file.text();
+    } catch (error) {
+      console.error("Error reading file:", error);
+      return NextResponse.json({ 
+        error: "Could not read file content. Make sure it's a valid text file." 
+      }, { status: 400 });
+    }
+    
     const fileType = file.type
     const fileName = file.name
 
@@ -72,6 +105,19 @@ Please provide:
       temperature: 0.5,
       maxTokens: 2048,
     })
+
+    // Cache the result
+    analysisCache.set(cacheKey, {
+      timestamp: Date.now(),
+      analysis: text
+    });
+
+    // Clean up old cache entries
+    for (const [key, value] of analysisCache.entries()) {
+      if (Date.now() - value.timestamp > CACHE_TTL) {
+        analysisCache.delete(key);
+      }
+    }
 
     return NextResponse.json({ analysis: text })
   } catch (error) {
