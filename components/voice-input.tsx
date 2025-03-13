@@ -1,8 +1,44 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Mic, MicOff, Loader2 } from "lucide-react"
+import { motion } from "framer-motion"
+
+// Add TypeScript declarations for the Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number
+  results: {
+    [key: number]: {
+      isFinal: boolean
+      [key: number]: {
+        transcript: string
+      }
+    }
+  }
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: (event: SpeechRecognitionEvent) => void
+  onerror: (event: Event) => void
+  onend: () => void
+  start: () => void
+  stop: () => void
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: {
+      new(): SpeechRecognition
+    }
+    webkitSpeechRecognition: {
+      new(): SpeechRecognition
+    }
+  }
+}
 
 interface VoiceInputProps {
   onTranscription: (text: string) => void
@@ -13,15 +49,21 @@ export default function VoiceInput({ onTranscription, language }: VoiceInputProp
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState("")
   const [isSupported, setIsSupported] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   const translations = {
     en: {
       listening: "Listening...",
       notSupported: "Speech recognition not supported",
+      error: "Error occurred. Please try again.",
+      tapToSpeak: "Tap to speak",
     },
     bn: {
       listening: "শুনছি...",
       notSupported: "স্পিচ রিকগনিশন সমর্থিত নয়",
+      error: "ত্রুটি ঘটেছে। আবার চেষ্টা করুন।",
+      tapToSpeak: "কথা বলতে ট্যাপ করুন",
     },
   }
 
@@ -31,71 +73,115 @@ export default function VoiceInput({ onTranscription, language }: VoiceInputProp
     // Check if browser supports SpeechRecognition
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
       setIsSupported(false)
+      return
     }
-  }, [])
 
-  const toggleListening = () => {
-    if (!isSupported) return
-
-    if (isListening) {
-      stopListening()
-    } else {
-      startListening()
-    }
-  }
-
-  const startListening = () => {
-    setIsListening(true)
-    setTranscript("")
-
-    // This is a simplified implementation
-    // In a production app, you'd use a more robust speech recognition setup
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    const recognition = new SpeechRecognition()
+    recognitionRef.current = new SpeechRecognition()
+    
+    recognitionRef.current.continuous = true
+    recognitionRef.current.interimResults = true
+    recognitionRef.current.lang = language === "bn" ? "bn-BD" : "en-US"
 
-    recognition.lang = language === "bn" ? "bn-BD" : "en-US"
-    recognition.continuous = true
-    recognition.interimResults = true
-
-    recognition.onresult = (event) => {
+    recognitionRef.current.onresult = (event: any) => {
       const current = event.resultIndex
       const result = event.results[current]
       const transcriptText = result[0].transcript
       setTranscript(transcriptText)
+      
+      if (result.isFinal) {
+        onTranscription(transcriptText)
+        stopListening()
+      }
     }
 
-    recognition.onend = () => {
-      if (transcript) {
-        onTranscription(transcript)
-      }
+    recognitionRef.current.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error)
+      setError(t.error)
+      stopListening()
+    }
+
+    recognitionRef.current.onend = () => {
       setIsListening(false)
     }
 
-    recognition.start()
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+    }
+  }, [language, onTranscription, t.error])
 
-    // For demo purposes, automatically stop after 5 seconds
-    setTimeout(() => {
-      recognition.stop()
-    }, 5000)
+  const startListening = () => {
+    setError(null)
+    setTranscript("")
+    setIsListening(true)
+    recognitionRef.current?.start()
   }
 
   const stopListening = () => {
     setIsListening(false)
-    // In a real implementation, you would call recognition.stop() here
+    recognitionRef.current?.stop()
   }
 
   if (!isSupported) {
     return (
-      <Button variant="ghost" size="icon" disabled title={t.notSupported}>
-        <MicOff size={20} />
-      </Button>
+      <div className="flex flex-col items-center gap-2">
+        <Button variant="ghost" size="icon" disabled title={t.notSupported}>
+          <MicOff size={20} />
+        </Button>
+        <p className="text-sm text-muted-foreground">{t.notSupported}</p>
+      </div>
     )
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={toggleListening} className={isListening ? "text-red-500" : ""}>
-      {isListening ? <Loader2 size={20} className="animate-spin" /> : <Mic size={20} />}
-    </Button>
+    <div className="flex flex-col items-center gap-2">
+      <motion.div
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={isListening ? stopListening : startListening}
+          className={isListening ? "text-red-500 animate-pulse" : ""}
+        >
+          {isListening ? (
+            <Loader2 size={20} className="animate-spin" />
+          ) : (
+            <Mic size={20} />
+          )}
+        </Button>
+      </motion.div>
+      {isListening && (
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-sm text-muted-foreground"
+        >
+          {t.listening}
+        </motion.p>
+      )}
+      {error && (
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-sm text-red-500"
+        >
+          {error}
+        </motion.p>
+      )}
+      {transcript && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-sm text-muted-foreground max-w-md text-center"
+        >
+          {transcript}
+        </motion.p>
+      )}
+    </div>
   )
 }
 

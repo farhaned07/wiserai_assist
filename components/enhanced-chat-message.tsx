@@ -243,6 +243,19 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
     },
   }
 
+  // Add custom styles for markdown content
+  const markdownStyles = {
+    p: "mb-2 last:mb-0", // Reduced margin between paragraphs
+    h1: "text-2xl font-semibold mb-2 mt-3",
+    h2: "text-xl font-semibold mb-2 mt-2",
+    h3: "text-lg font-semibold mb-1.5 mt-2",
+    ul: "mb-2 space-y-1", // Reduced space between list items
+    ol: "mb-2 space-y-1",
+    li: "ml-4",
+    pre: "mb-2 rounded-md bg-gray-800/50 p-2",
+    code: "rounded bg-gray-800/30 px-1 py-0.5",
+  }
+
   const buttonVariants = {
     hidden: { opacity: 0, scale: 0.8 },
     visible: {
@@ -274,177 +287,128 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
     <motion.div
       ref={messageRef}
       className={cn(
-        "group relative mb-8 flex flex-col",
-        isUser ? "items-end" : "items-start"
+        "relative flex w-full items-start gap-4 px-4",
+        isUser ? "flex-row-reverse" : "flex-row"
       )}
+      variants={messageVariants}
       initial="hidden"
       animate={isVisible ? "visible" : "hidden"}
       whileHover="hover"
-      variants={messageVariants}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div
+      <div 
         className={cn(
-          "relative max-w-[85%] px-4 py-3 text-sm sm:text-base",
-          isUser ? "text-white/95" : "text-gray-100/95",
-          "transform-gpu transition-all duration-300",
-          "hover:translate-x-[2px]"
+          "flex-1 space-y-2 overflow-hidden px-1",
+          isUser ? "text-right" : "text-left"
         )}
       >
-        <motion.div 
-          className={cn(
-            "flex items-center gap-3 mb-2.5 pb-2",
-            "border-b",
-            isUser ? "border-white/[0.02]" : "border-gray-700/[0.05]"
-          )}
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <span className={cn(
-            "font-medium text-xs flex items-center gap-2",
-            isUser ? "text-blue-200/80" : "text-blue-300/80"
+        <div className={cn(
+          "inline-block rounded-lg px-3 py-2 text-sm",
+          isUser ? "bg-gradient-to-br from-blue-500/5 via-blue-400/3 to-indigo-400/5 text-white/95" : 
+                  "bg-gradient-to-br from-[#2A2B30]/5 to-[#1F2023]/5 text-gray-100/95"
+        )}>
+          <div className={cn(
+            "prose prose-sm max-w-none",
+            "prose-p:mb-2 prose-p:last:mb-0", // Reduced margin between paragraphs
+            "prose-headings:font-semibold",
+            "prose-h1:text-2xl prose-h1:mb-2 prose-h1:mt-3",
+            "prose-h2:text-xl prose-h2:mb-2 prose-h2:mt-2",
+            "prose-h3:text-lg prose-h3:mb-1.5 prose-h3:mt-2",
+            "prose-ul:mb-2 prose-ul:mt-0 prose-ul:space-y-1", // Reduced space between list items
+            "prose-ol:mb-2 prose-ol:mt-0 prose-ol:space-y-1",
+            "prose-li:ml-4",
+            "prose-pre:mb-2 prose-pre:rounded-md prose-pre:bg-gray-800/50 prose-pre:p-2",
+            "prose-code:rounded prose-code:bg-gray-800/30 prose-code:px-1 prose-code:py-0.5",
+            isUser ? "text-right" : "text-left"
           )}>
-            {isUser ? t.you : (
-              <>
-                <motion.span
-                  animate={{
-                    scale: [1, 1.15, 1],
-                    rotate: [0, 360],
-                  }}
-                  transition={{
-                    duration: 2.5,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                  }}
-                >
-                  <Sparkles size={12} className="text-blue-400/90" />
-                </motion.span>
-                {t.ai}
-              </>
-            )}
-          </span>
-          
-          {isStructured && !isUser && (
-            <motion.span 
-              className="text-[11px] bg-blue-500/5 text-blue-300/90 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 hover:bg-blue-500/10 transition-colors duration-300"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Code size={10} />
-              Structured
-            </motion.span>
-          )}
-          
-          {/* Show feedback thank you message */}
-          <AnimatePresence>
-            {showFeedbackThanks && !isUser && (
-              <motion.div 
-                className="text-[11px] text-green-400/90 flex items-center gap-1"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 500,
-                  damping: 30,
-                }}
-              >
-                <motion.span
-                  animate={{
-                    scale: [1, 1.2, 1],
-                  }}
-                  transition={{
-                    duration: 0.5,
-                    repeat: 1,
-                  }}
-                >
-                  <Check size={12} />
-                </motion.span>
-                {t.thanks}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-        
+            <SimpleMarkdownRenderer content={messageContent} />
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced feedback buttons for AI messages */}
+      {!isUser && isLastMessage && (
         <motion.div 
           className={cn(
-            "prose prose-invert max-w-none",
-            isUser ? "text-white/90" : "text-gray-100/90",
-            "leading-relaxed tracking-[-0.01em] space-y-3"
+            "flex items-center gap-2.5 mt-3 pt-2",
+            "border-t border-gray-700/[0.05]"
           )}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
         >
-          <SimpleMarkdownRenderer content={messageContent} />
-        </motion.div>
-        
-        {/* Enhanced feedback buttons for AI messages */}
-        {!isUser && isLastMessage && (
-          <motion.div 
-            className={cn(
-              "flex items-center gap-2.5 mt-3 pt-2",
-              "border-t border-gray-700/[0.05]"
-            )}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <motion.div 
-                    whileHover={{ scale: 1.1 }} 
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "h-7 w-7 rounded-full p-0",
-                        "hover:bg-white/[0.02] transition-all duration-300",
-                        "transform hover:scale-105",
-                        feedback === "positive" && "text-green-400/90 hover:text-green-400"
-                      )}
-                      onClick={() => handleFeedback("positive")}
-                      disabled={feedback !== "none"}
-                    >
-                      <ThumbsUp size={13} />
-                    </Button>
-                  </motion.div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="tooltip-animation">
-                  <p>{t.helpful}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <motion.div 
+                  whileHover={{ scale: 1.1 }} 
+                  whileTap={{ scale: 0.9 }}
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     className={cn(
                       "h-7 w-7 rounded-full p-0",
-                      "hover:bg-white/[0.02] transition-all duration-200",
-                      feedback === "negative" && "text-red-400/90 hover:text-red-400"
+                      "hover:bg-white/[0.02] transition-all duration-300",
+                      "transform hover:scale-105",
+                      feedback === "positive" && "text-green-400/90 hover:text-green-400"
                     )}
-                    onClick={() => handleFeedback("negative")}
+                    onClick={() => handleFeedback("positive")}
                     disabled={feedback !== "none"}
                   >
-                    <ThumbsDown size={13} />
+                    <ThumbsUp size={13} />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="tooltip-animation">
-                  <p>{t.notHelpful}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
+                </motion.div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="tooltip-animation">
+                <p>{t.helpful}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 w-7 rounded-full p-0",
+                    "hover:bg-white/[0.02] transition-all duration-200",
+                    feedback === "negative" && "text-red-400/90 hover:text-red-400"
+                  )}
+                  onClick={() => handleFeedback("negative")}
+                  disabled={feedback !== "none"}
+                >
+                  <ThumbsDown size={13} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="tooltip-animation">
+                <p>{t.notHelpful}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 rounded-full p-0 hover:bg-white/[0.02] hover:text-blue-400/90 transition-all duration-200"
+                  onClick={copyToClipboard}
+                >
+                  {copied ? <Check size={13} className="text-green-400/90" /> : <Copy size={13} />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="tooltip-animation">
+                <p>{copied ? t.copied : t.copy}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          {onRegenerate && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -452,39 +416,19 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 rounded-full p-0 hover:bg-white/[0.02] hover:text-blue-400/90 transition-all duration-200"
-                    onClick={copyToClipboard}
+                    onClick={onRegenerate}
                   >
-                    {copied ? <Check size={13} className="text-green-400/90" /> : <Copy size={13} />}
+                    <RefreshCw size={13} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="tooltip-animation">
-                  <p>{copied ? t.copied : t.copy}</p>
+                  <p>{t.regenerate}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            
-            {onRegenerate && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 rounded-full p-0 hover:bg-white/[0.02] hover:text-blue-400/90 transition-all duration-200"
-                      onClick={onRegenerate}
-                    >
-                      <RefreshCw size={13} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="tooltip-animation">
-                    <p>{t.regenerate}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </motion.div>
-        )}
-      </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Quick action menu for text selection */}
       <AnimatePresence>

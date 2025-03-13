@@ -30,31 +30,6 @@ import AutoResizeTextarea from "@/components/auto-resize-textarea"
 import { debounce } from "lodash"
 import AuthWrapper from "@/components/auth/auth-wrapper"
 
-// Add a utility function for local storage
-const CHAT_STORAGE_KEY = "wiser_chat_history"
-
-function saveChatToLocalStorage(messages: any[]) {
-  if (typeof window === 'undefined') return
-  try {
-    // Only store the last 10 conversations to avoid storage limits
-    const limitedMessages = messages.slice(-20)
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(limitedMessages))
-  } catch (error) {
-    console.error("Error saving chat to local storage:", error)
-  }
-}
-
-function loadChatFromLocalStorage() {
-  if (typeof window === 'undefined') return []
-  try {
-    const stored = localStorage.getItem(CHAT_STORAGE_KEY)
-    return stored ? JSON.parse(stored) : []
-  } catch (error) {
-    console.error("Error loading chat from local storage:", error)
-    return []
-  }
-}
-
 export default function ChatPage() {
   const { theme, setTheme } = useTheme()
   const { toast } = useToast()
@@ -75,7 +50,6 @@ export default function ChatPage() {
   const [abortController, setAbortController] = useState<AbortController | null>(null)
   const [inputDraft, setInputDraft] = useState("")
   const [isTyping, setIsTyping] = useState(false)
-  const [storedMessages, setStoredMessages] = useState<any[]>([])
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, error, setMessages, reload } = useChat({
     api: "/api/chat",
@@ -107,29 +81,6 @@ export default function ChatPage() {
     handleInputChange(e)
     setInputDraft(e.target.value)
   }
-
-  // Load chat history from local storage on initial render
-  useEffect(() => {
-    // Clear chat history on page refresh
-    if (window.performance.navigation.type === 1) { // Check if it's a page refresh
-      localStorage.removeItem(CHAT_STORAGE_KEY)
-      setShowWelcome(true)
-      return
-    }
-    
-    const loadedMessages = loadChatFromLocalStorage()
-    if (loadedMessages.length > 0) {
-      setMessages(loadedMessages)
-      setShowWelcome(false)
-    }
-  }, [setMessages])
-
-  // Save chat history to local storage when messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      saveChatToLocalStorage(messages)
-    }
-  }, [messages])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -283,6 +234,10 @@ export default function ChatPage() {
 
   const handleVoiceInputToggle = () => {
     setIsVoiceInputActive(!isVoiceInputActive)
+  }
+
+  const handleFileUploadToggle = () => {
+    setShowFileUpload(!showFileUpload)
   }
 
   const handleClearChat = () => {
@@ -795,7 +750,7 @@ export default function ChatPage() {
                       handleSubmit={handleSubmit}
                       isLoading={isLoading}
                       onVoiceInputToggle={handleVoiceInputToggle}
-                      onFileUploadToggle={() => setShowFileUpload(!showFileUpload)}
+                      onFileUploadToggle={handleFileUploadToggle}
                       isVoiceInputActive={isVoiceInputActive}
                       language={language}
                       suggestions={actions.map(action => ({ icon: action.icon, text: action.text }))}
@@ -823,17 +778,23 @@ export default function ChatPage() {
           )}
         </AnimatePresence>
 
-        {/* File upload area */}
+        {/* File Upload Modal */}
         <AnimatePresence>
           {showFileUpload && (
             <motion.div
-              className="fixed bottom-24 left-0 right-0 p-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFileUpload(false)}
             >
-              <div className="max-w-md mx-auto">
+              <motion.div
+                className="w-full max-w-md p-6 bg-background rounded-2xl shadow-xl"
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <FileUpload
                   onFileSelect={handleFileSelect}
                   onClear={handleFileClear}
@@ -842,7 +803,14 @@ export default function ChatPage() {
                   isUploading={isUploading}
                   uploadProgress={uploadProgress}
                 />
-              </div>
+                {selectedFile && !isUploading && (
+                  <div className="mt-4 flex justify-end">
+                    <Button onClick={handleFileUpload} className="rounded-full">
+                      {language === "en" ? "Process File" : "ফাইল প্রসেস করুন"}
+                    </Button>
+                  </div>
+                )}
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
