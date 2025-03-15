@@ -118,13 +118,13 @@ export default function ChatInterface({
     <motion.div
       key="chat"
       ref={chatContainerRef}
-      className="w-full max-w-3xl mx-auto h-full overflow-y-auto py-4 px-2 chat-container no-scrollbar"
+      className="flex flex-col w-full h-full overflow-y-auto relative"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="space-y-4">
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
         <AnimatePresence initial={false}>
           {messages.map((message, index) => (
             <motion.div
@@ -156,7 +156,7 @@ export default function ChatInterface({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="max-w-3xl mx-auto py-4"
+            className="w-full py-4"
           >
             <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
               <EnhancedTypingIndicator variant="modern" />
@@ -170,7 +170,7 @@ export default function ChatInterface({
       <AnimatePresence>
         {showScrollButton && (
           <motion.div
-            className="fixed bottom-24 right-4 z-10"
+            className="fixed bottom-24 right-4 z-10 sm:right-6"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
@@ -191,18 +191,18 @@ export default function ChatInterface({
       <AnimatePresence>
         {selectedText && (
           <motion.div
-            className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-10 bg-white/10 backdrop-blur-md rounded-full shadow-lg border border-white/20 p-1"
+            className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-10 bg-white/10 backdrop-blur-md rounded-full shadow-lg border border-white/20 p-1 max-w-[90vw] overflow-x-auto no-scrollbar"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 px-2">
               <Button
                 onClick={() => handleQuickAction("explain")}
                 size="sm"
                 variant="ghost"
-                className="rounded-full hover:bg-white/10"
+                className="rounded-full hover:bg-white/10 whitespace-nowrap text-sm"
               >
                 {t.explain}
               </Button>
@@ -210,7 +210,7 @@ export default function ChatInterface({
                 onClick={() => handleQuickAction("summarize")}
                 size="sm"
                 variant="ghost"
-                className="rounded-full hover:bg-white/10"
+                className="rounded-full hover:bg-white/10 whitespace-nowrap text-sm"
               >
                 {t.summarize}
               </Button>
@@ -218,7 +218,7 @@ export default function ChatInterface({
                 onClick={() => handleQuickAction("translate")}
                 size="sm"
                 variant="ghost"
-                className="rounded-full hover:bg-white/10"
+                className="rounded-full hover:bg-white/10 whitespace-nowrap text-sm"
               >
                 {t.translate}
               </Button>
@@ -226,7 +226,7 @@ export default function ChatInterface({
                 onClick={() => handleQuickAction("code")}
                 size="sm"
                 variant="ghost"
-                className="rounded-full hover:bg-white/10"
+                className="rounded-full hover:bg-white/10 whitespace-nowrap text-sm"
               >
                 {t.code}
               </Button>
@@ -235,14 +235,14 @@ export default function ChatInterface({
         )}
       </AnimatePresence>
 
-      {/* Chat input when in chat mode */}
+      {/* Chat input */}
       <motion.div
-        className="fixed bottom-0 left-0 right-0 p-4 bg-[#1A1B1E]/80 backdrop-blur-md border-t border-white/5"
+        className="fixed bottom-0 left-0 right-0 bg-[#1A1B1E]/80 backdrop-blur-md border-t border-white/5 p-4 sm:p-6"
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
       >
-        <div className="max-w-3xl mx-auto">
+        <div className="w-full max-w-5xl mx-auto">
           <EnhancedChatInput
             input={input}
             handleInputChange={handleInputChange}
@@ -257,7 +257,7 @@ export default function ChatInterface({
             maxLength={4000}
           />
 
-          <div className="flex justify-between items-center mt-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 gap-2 sm:gap-4">
             <div className="text-xs text-muted-foreground/60">
               {t.keyboardShortcuts}
             </div>

@@ -343,7 +343,7 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
     <motion.div
       ref={messageRef}
       className={cn(
-        "relative flex w-full items-start gap-4 px-4",
+        "relative flex w-full items-start gap-2 sm:gap-4",
         isUser ? "flex-row-reverse" : "flex-row"
       )}
       variants={messageVariants}
@@ -355,27 +355,28 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
     >
       <div 
         className={cn(
-          "flex-1 space-y-2 overflow-hidden px-1",
+          "flex-1 space-y-2 overflow-hidden",
           isUser ? "text-right" : "text-left"
         )}
       >
         <div className={cn(
-          "inline-block rounded-lg px-3 py-2 text-sm",
+          "inline-block rounded-lg px-3 py-2 text-sm sm:text-base max-w-[85vw] sm:max-w-[75vw] md:max-w-[65vw]",
           isUser ? "bg-gradient-to-br from-blue-500/5 via-blue-400/3 to-indigo-400/5 text-white/95" : 
                   "bg-gradient-to-br from-[#2A2B30]/5 to-[#1F2023]/5 text-gray-100/95"
         )}>
           <div className={cn(
-            "prose prose-sm max-w-none",
+            "prose prose-sm sm:prose-base max-w-none",
             "prose-p:mb-2 prose-p:last:mb-0",
             "prose-headings:font-semibold",
-            "prose-h1:text-2xl prose-h1:mb-2 prose-h1:mt-3",
-            "prose-h2:text-xl prose-h2:mb-2 prose-h2:mt-2",
-            "prose-h3:text-lg prose-h3:mb-1.5 prose-h3:mt-2",
+            "prose-h1:text-xl sm:prose-h1:text-2xl prose-h1:mb-2 prose-h1:mt-3",
+            "prose-h2:text-lg sm:prose-h2:text-xl prose-h2:mb-2 prose-h2:mt-2",
+            "prose-h3:text-base sm:prose-h3:text-lg prose-h3:mb-1.5 prose-h3:mt-2",
             "prose-ul:mb-2 prose-ul:mt-0 prose-ul:space-y-1",
             "prose-ol:mb-2 prose-ol:mt-0 prose-ol:space-y-1",
             "prose-li:ml-4",
             "prose-pre:mb-2 prose-pre:rounded-md prose-pre:bg-gray-800/50 prose-pre:p-2",
             "prose-code:rounded prose-code:bg-gray-800/30 prose-code:px-1 prose-code:py-0.5",
+            "prose-table:text-sm sm:prose-table:text-base",
             isUser ? "text-right" : "text-left"
           )}>
             <MemoizedReactMarkdown
@@ -394,44 +395,44 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
                     </code>
                   )
                 },
-                // Optimize other markdown components
-                p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
-                ul: ({ children }) => <ul className="list-disc pl-6 mb-4">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal pl-6 mb-4">{children}</ol>,
-                li: ({ children }) => <li className="mb-1">{children}</li>,
-                h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-xl font-bold mb-3 mt-5">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-lg font-bold mb-3 mt-4">{children}</h3>,
+                // Optimize other markdown components with responsive sizes
+                p: ({ children }) => <p className="mb-3 last:mb-0 text-sm sm:text-base">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc pl-4 sm:pl-6 mb-3">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-4 sm:pl-6 mb-3">{children}</ol>,
+                li: ({ children }) => <li className="mb-1 text-sm sm:text-base">{children}</li>,
+                h1: ({ children }) => <h1 className="text-xl sm:text-2xl font-bold mb-3 mt-4">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-lg sm:text-xl font-bold mb-2 mt-3">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-base sm:text-lg font-bold mb-2 mt-3">{children}</h3>,
                 a: ({ href, children }) => (
                   <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
                     {children}
                   </a>
                 ),
                 blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-gray-500 pl-4 italic my-4">{children}</blockquote>
+                  <blockquote className="border-l-4 border-gray-500 pl-3 sm:pl-4 italic my-3 text-sm sm:text-base">{children}</blockquote>
                 ),
                 table: ({ children }) => (
-                  <div className="overflow-x-auto my-4">
-                    <table className="min-w-full divide-y divide-gray-700">{children}</table>
+                  <div className="overflow-x-auto my-3">
+                    <table className="min-w-full divide-y divide-gray-700 text-sm sm:text-base">{children}</table>
                   </div>
                 ),
                 thead: ({ children }) => <thead className="bg-gray-800">{children}</thead>,
                 tbody: ({ children }) => <tbody className="divide-y divide-gray-700">{children}</tbody>,
                 tr: ({ children }) => <tr>{children}</tr>,
                 th: ({ children }) => (
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">
                     {children}
                   </th>
                 ),
-                td: ({ children }) => <td className="px-3 py-2 whitespace-nowrap text-sm">{children}</td>,
+                td: ({ children }) => <td className="px-2 sm:px-3 py-2 whitespace-normal text-sm">{children}</td>,
               }}
             />
 
-            {/* Move feedback buttons here - inside the message bubble */}
+            {/* Feedback buttons with responsive sizing */}
             {!isUser && isLastMessage && (
               <motion.div 
                 className={cn(
-                  "flex items-center gap-2.5 mt-3",
+                  "flex items-center gap-1.5 sm:gap-2.5 mt-2 sm:mt-3",
                   "opacity-0 group-hover:opacity-100 transition-opacity"
                 )}
                 initial={{ opacity: 0, y: 10 }}
@@ -533,7 +534,7 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
         </div>
       </div>
 
-      {/* Quick action menu for text selection */}
+      {/* Quick action menu with responsive positioning */}
       <AnimatePresence>
         {showQuickActions && selectedText && (
           <motion.div
@@ -541,14 +542,15 @@ const EnhancedChatMessage = memo(function EnhancedChatMessage({
             style={{ 
               left: `${quickActionPosition.x}px`, 
               top: `${quickActionPosition.y}px`,
-              transform: 'translateX(-50%)'
+              transform: 'translateX(-50%)',
+              maxWidth: '90vw'
             }}
             initial="hidden"
             animate="visible"
             exit="hidden"
             variants={quickActionVariants}
           >
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
