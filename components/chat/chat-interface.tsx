@@ -4,8 +4,12 @@ import { ChevronDown } from "lucide-react"
 import EnhancedChatMessage from "@/components/enhanced-chat-message"
 import EnhancedTypingIndicator from "@/components/enhanced-typing-indicator"
 import EnhancedChatInput from "@/components/enhanced-chat-input"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useAnimation } from "framer-motion"
 import { Message } from "ai"
+import { useSwipeable } from "react-swipeable"
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh"
+import { useDoubleTap } from "@/hooks/use-double-tap"
+import { Copy, Share } from "lucide-react"
 
 type ChatInterfaceProps = {
   messages: Message[]
@@ -45,6 +49,9 @@ export default function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const controls = useAnimation()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showActionsMenu, setShowActionsMenu] = useState(false)
 
   // Handle scroll events to show/hide scroll to bottom button
   useEffect(() => {
@@ -97,9 +104,7 @@ export default function ChatInterface({
       translate: "অনুবাদ করুন",
       code: "কোড লিখুন",
       structured: "কাঠামোগত প্রতিক্রিয়া",
-      stopVoice: "ভয়েস বন্ধ করুন",
-      clearChat: "চ্যাট মুছুন",
-      keyboardShortcuts: "কীবোর্ড শর্টকাট: ফোকাস করতে Ctrl+/, পাঠাতে Ctrl+Enter"
+      stopVoice: "ভয়েস বন্ধ করুন"
     },
   }
 
@@ -114,30 +119,115 @@ export default function ChatInterface({
     { icon: null, text: t.structured },
   ]
 
+  // Pull to refresh handler
+  const { isPulling, pullProgress } = usePullToRefresh({
+    onRefresh: async () => {
+      setIsRefreshing(true)
+      // Implement your refresh logic here
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      setIsRefreshing(false)
+    },
+    containerRef: chatContainerRef
+  })
+
+  // Double tap to like/react
+  const handleDoubleTap = useDoubleTap(() => {
+    // Implement reaction logic
+  }, 300)
+
+  // Swipe handlers for message actions
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: (eventData) => {
+      setShowActionsMenu(true)
+    },
+    onSwipedRight: (eventData) => {
+      setShowActionsMenu(false)
+    },
+    preventDefaultTouchmoveEvent: true,
+    trackMouse: false
+  })
+
+  // Optimized animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { duration: 0.2 }
+    },
+    exit: { opacity: 0, transition: { duration: 0.15 } }
+  }
+
+  const messageVariants = {
+    hidden: { 
+      opacity: 0,
+      y: 10,
+      transform: 'translateZ(0)' // Hardware acceleration
+    },
+    visible: { 
+      opacity: 1,
+      y: 0,
+      transform: 'translateZ(0)',
+      transition: {
+        duration: 0.2,
+        ease: [0.25, 0.1, 0.25, 1.0], // Optimized easing
+      }
+    },
+    exit: { 
+      opacity: 0,
+      transform: 'translateZ(0)',
+      transition: { duration: 0.15 }
+    }
+  }
+
   return (
     <motion.div
       key="chat"
       ref={chatContainerRef}
-      className="flex flex-col w-full h-full overflow-y-auto relative"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
+      className="flex flex-col w-full h-full overflow-y-auto relative overscroll-y-contain"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      style={{ 
+        willChange: 'transform',
+        backfaceVisibility: 'hidden'
+      }}
+      {...swipeHandlers}
     >
+      {/* Pull to refresh indicator - Optimized */}
+      {isPulling && (
+        <motion.div 
+          className="absolute top-0 left-0 w-full flex justify-center py-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: pullProgress }}
+          style={{ transform: 'translateZ(0)' }}
+        >
+          <motion.div 
+            className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full"
+            animate={{ 
+              rotate: 360,
+              transition: { duration: 1, repeat: Infinity, ease: "linear" }
+            }}
+            style={{ transform: 'translateZ(0)' }}
+          />
+        </motion.div>
+      )}
+
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="popLayout">
           {messages.map((message, index) => (
             <motion.div
               key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{
-                type: "spring",
-                stiffness: 500,
-                damping: 30,
-                delay: index * 0.05,
+              variants={messageVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              style={{ 
+                willChange: 'transform, opacity',
+                transform: 'translateZ(0)'
               }}
+              className="relative"
+              {...handleDoubleTap}
             >
               <EnhancedChatMessage
                 message={message}
@@ -146,40 +236,88 @@ export default function ChatInterface({
                 onCopy={handleCopyMessage}
                 isLastMessage={index === messages.length - 1 && message.role === "assistant"}
               />
+
+              {/* Swipeable actions menu - Optimized */}
+              <AnimatePresence mode="wait">
+                {showActionsMenu && (
+                  <motion.div
+                    className="absolute right-0 top-0 h-full flex items-center gap-2 px-3 bg-gradient-to-l from-[#1A1B1E] to-transparent"
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ 
+                      x: 0, 
+                      opacity: 1,
+                      transition: { 
+                        duration: 0.2,
+                        ease: [0.25, 0.1, 0.25, 1.0]
+                      }
+                    }}
+                    exit={{ 
+                      x: 50, 
+                      opacity: 0,
+                      transition: { duration: 0.15 }
+                    }}
+                    style={{ transform: 'translateZ(0)' }}
+                  >
+                    <button className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors duration-150">
+                      <Copy size={16} className="text-white/80" />
+                    </button>
+                    <button className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors duration-150">
+                      <Share size={16} className="text-white/80" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="w-full py-4"
-          >
-            <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
-              <EnhancedTypingIndicator variant="modern" />
-            </div>
-          </motion.div>
-        )}
+        {/* Loading indicator - Optimized */}
+        <AnimatePresence mode="wait">
+          {isLoading && (
+            <motion.div
+              variants={messageVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              style={{ transform: 'translateZ(0)' }}
+              className="w-full py-4"
+            >
+              <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
+                <EnhancedTypingIndicator variant="modern" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Scroll to bottom button */}
+      {/* Scroll button - Optimized */}
       <AnimatePresence>
         {showScrollButton && (
           <motion.div
             className="fixed bottom-24 right-4 z-10 sm:right-6"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              y: 0,
+              transition: {
+                duration: 0.2,
+                ease: [0.25, 0.1, 0.25, 1.0]
+              }
+            }}
+            exit={{ 
+              opacity: 0, 
+              scale: 0.9, 
+              y: 10,
+              transition: { duration: 0.15 }
+            }}
+            style={{ transform: 'translateZ(0)' }}
           >
             <Button
               onClick={scrollToBottom}
               size="icon"
-              className="h-10 w-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
+              className="h-10 w-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg transition-colors duration-150"
             >
               <ChevronDown size={20} />
             </Button>
@@ -187,15 +325,29 @@ export default function ChatInterface({
         )}
       </AnimatePresence>
 
-      {/* Selected text quick actions */}
+      {/* Quick actions - Optimized */}
       <AnimatePresence>
         {selectedText && (
           <motion.div
-            className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-10 bg-white/10 backdrop-blur-md rounded-full shadow-lg border border-white/20 p-1 max-w-[90vw] overflow-x-auto no-scrollbar"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.2 }}
+            className="fixed bottom-24 left-1/2 z-10 bg-white/10 backdrop-blur-md rounded-full shadow-lg border border-white/20 p-1 max-w-[90vw] overflow-x-auto no-scrollbar"
+            initial={{ opacity: 0, y: 20, x: '-50%' }}
+            animate={{ 
+              opacity: 1, 
+              y: 0,
+              transition: {
+                duration: 0.2,
+                ease: [0.25, 0.1, 0.25, 1.0]
+              }
+            }}
+            exit={{ 
+              opacity: 0, 
+              y: 20,
+              transition: { duration: 0.15 }
+            }}
+            style={{ 
+              transform: 'translateX(-50%) translateZ(0)',
+              willChange: 'transform, opacity'
+            }}
           >
             <div className="flex items-center gap-1 px-2">
               <Button
@@ -235,12 +387,19 @@ export default function ChatInterface({
         )}
       </AnimatePresence>
 
-      {/* Chat input */}
+      {/* Chat input - Optimized */}
       <motion.div
         className="fixed bottom-0 left-0 right-0 bg-[#1A1B1E]/80 backdrop-blur-md border-t border-white/5 p-4 sm:p-6"
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ 
+          y: 0, 
+          opacity: 1,
+          transition: {
+            duration: 0.2,
+            ease: [0.25, 0.1, 0.25, 1.0]
+          }
+        }}
+        style={{ transform: 'translateZ(0)' }}
       >
         <div className="w-full max-w-5xl mx-auto">
           <EnhancedChatInput
@@ -257,19 +416,21 @@ export default function ChatInterface({
             maxLength={4000}
           />
 
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 gap-2 sm:gap-4">
-            <div className="text-xs text-muted-foreground/60">
-              {t.keyboardShortcuts}
+          {language === "en" && (
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 gap-2 sm:gap-4">
+              <div className="text-xs text-muted-foreground/60">
+                {t.keyboardShortcuts}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearChat}
+                className="text-xs rounded-full hover:bg-white/5"
+              >
+                {t.clearChat}
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearChat}
-              className="text-xs rounded-full hover:bg-white/5"
-            >
-              {t.clearChat}
-            </Button>
-          </div>
+          )}
         </div>
       </motion.div>
     </motion.div>
