@@ -5,7 +5,7 @@ import { ToastProvider } from "@/components/ui/toast"
 import { font } from "@/lib/fonts"
 import { cn } from "@/lib/utils"
 import { AuthProvider } from "@/lib/auth-context"
-import { Poppins, Noto_Sans_Bengali } from "next/font/google"
+import { Poppins, Noto_Sans_Bengali, League_Spartan } from "next/font/google"
 import { Metadata } from "next"
 
 const bengali = Noto_Sans_Bengali({
@@ -20,6 +20,13 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-poppins",
+  display: "swap",
+})
+
+const leagueSpartan = League_Spartan({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-league-spartan",
   display: "swap",
 })
 
@@ -57,6 +64,7 @@ export default function RootLayout({
         font.variable,
         bengali.variable,
         poppins.variable,
+        leagueSpartan.variable,
         "bg-[#1A1B1E]",
         "font-bengali antialiased"
       )}>

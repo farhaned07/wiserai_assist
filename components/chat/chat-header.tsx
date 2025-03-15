@@ -34,15 +34,15 @@ export default function ChatHeader({
 
   return (
     <motion.header
-      className="flex justify-between items-center p-4 border-b border-white/5 bg-[#1A1B1E]/90 backdrop-blur-lg sticky top-0 z-50 shadow-glow-enhanced"
+      className="flex justify-between items-center px-6 h-14 border-b border-white/[0.04] bg-[#1A1B1E]/70 backdrop-blur-2xl sticky top-0 z-50"
       initial="hidden"
       animate="visible"
       variants={headerVariants}
     >
       <motion.div 
         className="flex items-center gap-2" 
-        whileHover={{ scale: 1.02 }} 
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01 }} 
+        whileTap={{ scale: 0.99 }}
       >
         <motion.div
           className="flex items-center gap-2"
@@ -50,53 +50,56 @@ export default function ChatHeader({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <span className="text-2xl font-bold text-white font-poppins tracking-tight">
+          <span className="text-xl font-bold text-white/90 font-league-spartan">
             onnesha
           </span>
         </motion.div>
       </motion.div>
-      <div className="flex items-center gap-3">
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+      <div className="flex items-center gap-2.5">
+        <motion.div 
+          whileHover={{ scale: 1.01 }} 
+          whileTap={{ scale: 0.99 }}
+          className="relative"
+        >
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleLanguage}
-            className="rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 shadow-glow font-bengali text-base font-medium px-4 h-9"
+            className="rounded-md bg-white/[0.03] hover:bg-white/[0.08] text-white/80 hover:text-white transition-colors duration-200 font-bengali text-sm font-medium h-7 px-3 min-w-[2.5rem]"
           >
             {language === "en" ? "বাং" : "EN"}
           </Button>
         </motion.div>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <motion.div 
+          whileHover={{ scale: 1.01 }} 
+          whileTap={{ scale: 0.99 }}
+          className="relative"
+        >
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowPaymentModal(true)}
-            className="rounded-full bg-white/5 hover:bg-white/10 hover:text-yellow-400 transition-all duration-300 shadow-glow relative"
+            className="rounded-md bg-white/[0.03] hover:bg-white/[0.08] text-yellow-400/80 hover:text-yellow-400 transition-colors duration-200 h-7 w-7"
             title={language === "en" ? "Premium subscription" : "প্রিমিয়াম সাবস্ক্রিপশন"}
           >
-            <Crown size={18} className="text-yellow-400" />
-            <motion.span 
-              className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.5, 1, 0.5]
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
+            <Crown size={14} />
+            <span 
+              className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400/80 rounded-full"
             />
           </Button>
         </motion.div>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <motion.div 
+          whileHover={{ scale: 1.01 }} 
+          whileTap={{ scale: 0.99 }}
+          className="relative"
+        >
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowSettingsDialog(!showSettingsDialog)}
-            className="rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 shadow-glow"
+            className="rounded-md bg-white/[0.03] hover:bg-white/[0.08] text-white/80 hover:text-white transition-colors duration-200 h-7 w-7"
           >
-            <Settings size={18} />
+            <Settings size={14} />
           </Button>
         </motion.div>
         <AuthWrapper 

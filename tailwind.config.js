@@ -20,6 +20,7 @@ module.exports = {
         bengali: ["var(--font-bengali)", "system-ui", "sans-serif"],
         sans: ["var(--font-bengali)", "var(--font-poppins)", "system-ui", "sans-serif"],
         poppins: ["var(--font-poppins)", "system-ui", "sans-serif"],
+        'league-spartan': ["var(--font-league-spartan)"],
       },
       fontSize: {
         // Optimized sizes for Bengali text
