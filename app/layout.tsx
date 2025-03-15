@@ -5,9 +5,26 @@ import { ToastProvider } from "@/components/ui/toast"
 import { font } from "@/lib/fonts"
 import { cn } from "@/lib/utils"
 import { AuthProvider } from "@/lib/auth-context"
+import { Poppins, Noto_Sans_Bengali } from "next/font/google"
+import { Metadata } from "next"
 
-export const metadata = {
-  title: "wiser - AI Assistant",
+const bengali = Noto_Sans_Bengali({
+  subsets: ["bengali"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-bengali",
+  preload: true,
+  display: "swap",
+})
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
+  display: "swap",
+})
+
+export const metadata: Metadata = {
+  title: "onnesha - AI Assistant",
   description: "AI assistant optimized for Bangla speakers",
   icons: {
     icon: "/favicon.ico",
@@ -15,7 +32,7 @@ export const metadata = {
     apple: "/favicon.ico",
   },
   manifest: "/manifest.json",
-  generator: 'v0.dev'
+  generator: "Next.js"
 }
 
 export default function RootLayout({
@@ -24,8 +41,25 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={cn(font.variable, "bg-[#1A1B1E]")}>
+    <html lang="bn" className="dark" suppressHydrationWarning>
+      <head>
+        <link
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+        />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+      </head>
+      <body className={cn(
+        font.variable,
+        bengali.variable,
+        poppins.variable,
+        "bg-[#1A1B1E]",
+        "font-bengali antialiased"
+      )}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
             <ToastProvider>{children}</ToastProvider>

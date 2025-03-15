@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
-import { useRef, useEffect, useState, forwardRef, useCallback } from "react"
+import React, { useEffect, useRef, useCallback } from "react"
+import { rafThrottle } from "@/utils/performance"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 
@@ -15,87 +15,69 @@ interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextA
   animateHeight?: boolean
 }
 
-// Debounce function to limit how often a function is called
-function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
-  
-  return function(...args: Parameters<T>) {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
+const AutoResizeTextarea = React.memo(React.forwardRef<HTMLTextAreaElement, AutoResizeTextareaProps>(
+  ({
+    value,
+    onChange,
+    minRows = 1,
+    maxRows = 10,
+    className,
+    showCharCount = false,
+    maxLength,
+    animateHeight = true,
+    ...props
+  }, forwardedRef) => {
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+    const [height, setHeight] = React.useState<number>(0)
+    const [isFocused, setIsFocused] = React.useState(false)
+    const [charCount, setCharCount] = React.useState(0)
 
-const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeTextareaProps>(
-  (
-    {
-      value,
-      onChange,
-      minRows = 1,
-      maxRows = 5,
-      className,
-      showCharCount = false,
-      maxLength,
-      animateHeight = true,
-      ...props
-    },
-    ref
-  ) => {
-    const textareaRef = useRef<HTMLTextAreaElement>(null)
-    const [height, setHeight] = useState<number>(0)
-    const [isFocused, setIsFocused] = useState(false)
-    const [charCount, setCharCount] = useState(0)
-
-    // Combine the forwarded ref with our internal ref
-    const combinedRef = (node: HTMLTextAreaElement) => {
-      textareaRef.current = node
-      if (typeof ref === 'function') {
-        ref(node)
-      } else if (ref) {
-        ref.current = node
+    // Combine the forwarded ref with our local ref
+    const setRef = useCallback((element: HTMLTextAreaElement | null) => {
+      textareaRef.current = element
+      
+      // Handle forwarded ref
+      if (typeof forwardedRef === 'function') {
+        forwardedRef(element)
+      } else if (forwardedRef) {
+        forwardedRef.current = element
       }
-    }
+    }, [forwardedRef])
 
-    // Memoize the resize function with useCallback
-    const resizeTextarea = useCallback(() => {
+    // Resize function using requestAnimationFrame for performance
+    const resizeTextarea = rafThrottle(() => {
       const textarea = textareaRef.current
       if (!textarea) return
-
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = "auto"
-
-      // Calculate the height based on scrollHeight
-      const lineHeight = Number.parseInt(getComputedStyle(textarea).lineHeight) || 24
-      const paddingTop = Number.parseInt(getComputedStyle(textarea).paddingTop) || 8
-      const paddingBottom = Number.parseInt(getComputedStyle(textarea).paddingBottom) || 8
-
-      const minHeight = minRows * lineHeight + paddingTop + paddingBottom
-      const maxHeight = maxRows * lineHeight + paddingTop + paddingBottom
-
-      const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)
       
-      if (animateHeight) {
-        setHeight(newHeight)
-      } else {
-        textarea.style.height = `${newHeight}px`
-      }
+      // Reset height to get the correct scrollHeight
+      textarea.style.height = 'auto'
+      
+      // Calculate min and max heights based on rows
+      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20
+      const minHeight = minRows * lineHeight
+      const maxHeight = maxRows * lineHeight
+      
+      // Set the new height based on content, constrained by min/max
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)
+      textarea.style.height = `${newHeight}px`
+      
+      // Add overflow if content exceeds max height
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
       
       // Update character count
       setCharCount(value.length)
-    }, [minRows, maxRows, animateHeight, value.length]);
-
-    // Create a debounced version of resizeTextarea
-    const debouncedResize = useCallback(debounce(resizeTextarea, 10), [resizeTextarea]);
+    })
 
     // Resize on value change
     useEffect(() => {
-      debouncedResize();
-    }, [value, debouncedResize]);
+      resizeTextarea()
+    }, [value, resizeTextarea])
 
-    // Initial resize
+    // Resize on window resize
     useEffect(() => {
-      resizeTextarea();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+      window.addEventListener('resize', resizeTextarea)
+      return () => window.removeEventListener('resize', resizeTextarea)
+    }, [resizeTextarea])
 
     // Apply animated height
     useEffect(() => {
@@ -121,7 +103,7 @@ const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeTextareaPro
     return (
       <div className="relative w-full">
         <textarea
-          ref={combinedRef}
+          ref={setRef}
           value={value}
           onChange={onChange}
           onFocus={handleFocus}
@@ -155,9 +137,9 @@ const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeTextareaPro
       </div>
     )
   }
-)
+))
 
-AutoResizeTextarea.displayName = "AutoResizeTextarea"
+AutoResizeTextarea.displayName = 'AutoResizeTextarea'
 
 export default AutoResizeTextarea
 

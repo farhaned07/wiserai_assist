@@ -1,40 +1,25 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useChat } from "ai/react"
-import { Button } from "@/components/ui/button"
-import {
-  Settings,
-  ArrowUp,
-  Search,
-  Lightbulb,
-  BookOpen,
-  HelpCircle,
-  BarChart3,
-  Code,
-  Mic,
-  Paperclip,
-  Crown,
-  ChevronDown,
-} from "lucide-react"
-import EnhancedChatMessage from "@/components/enhanced-chat-message"
+import { BookOpen, HelpCircle, BarChart3, Code, Lightbulb } from "lucide-react"
 import FileUpload from "@/components/file-upload"
 import PaymentModal from "@/components/payment-modal"
-import EnhancedTypingIndicator from "@/components/enhanced-typing-indicator"
 import VoiceInput from "@/components/voice-input"
-import EnhancedChatInput from "@/components/enhanced-chat-input"
 import { useTheme } from "next-themes"
 import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
-import AutoResizeTextarea from "@/components/auto-resize-textarea"
-import { debounce } from "lodash"
-import AuthWrapper from "@/components/auth/auth-wrapper"
+import { useChatPerformance } from "@/hooks/use-chat-performance"
+
+// Import our new components
+import WelcomeScreen from "@/components/chat/welcome-screen"
+import ChatInterface from "@/components/chat/chat-interface"
+import ChatHeader from "@/components/chat/chat-header"
 
 export default function ChatPage() {
   const { theme, setTheme } = useTheme()
   const { toast } = useToast()
-  const [language, setLanguage] = useState<"en" | "bn">("en")
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [language, setLanguage] = useState<"en" | "bn">("bn")
   const [showWelcome, setShowWelcome] = useState(true)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -43,13 +28,44 @@ export default function ChatPage() {
   const [showFileUpload, setShowFileUpload] = useState(false)
   const [isVoiceInputActive, setIsVoiceInputActive] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const [isFocused, setIsFocused] = useState(false)
-  const [showScrollButton, setShowScrollButton] = useState(false)
-  const [selectedText, setSelectedText] = useState("")
-  const chatContainerRef = useRef<HTMLDivElement>(null)
-  const [abortController, setAbortController] = useState<AbortController | null>(null)
-  const [inputDraft, setInputDraft] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
+
+  // Use our custom performance hook
+  const {
+    showScrollButton,
+    selectedText,
+    isTyping,
+    inputDraft,
+    messagesEndRef,
+    chatContainerRef,
+    abortControllerRef,
+    handleOptimizedInputChange,
+    scrollToBottom,
+    setSelectedText,
+  } = useChatPerformance()
+
+  // Memoize translations to prevent recreation on each render
+  const translations = useMemo(() => ({
+    en: {
+      explain: "Explain this",
+      summarize: "Summarize",
+      translate: "Translate",
+      code: "Write code",
+      structured: "Structured response",
+      deepsearch: "Deep search",
+      think: "Think step by step",
+    },
+    bn: {
+      explain: "ব্যাখ্যা করুন",
+      summarize: "সারাংশ",
+      translate: "অনুবাদ করুন",
+      code: "কোড লিখুন",
+      structured: "কাঠামোগত প্রতিক্রিয়া",
+      deepsearch: "গভীর অনুসন্ধান",
+      think: "ধাপে ধাপে চিন্তা করুন",
+    },
+  }), [])
+
+  const t = translations[language]
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, error, setMessages, reload } = useChat({
     api: "/api/chat",
@@ -76,55 +92,10 @@ export default function ChatPage() {
     },
   })
 
-  // Handle input changes directly without debounce
-  const handleDirectInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    handleInputChange(e)
-    setInputDraft(e.target.value)
-  }
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      const chatContainer = messagesEndRef.current.parentElement
-      if (chatContainer) {
-        // Only auto-scroll if user is already near the bottom
-        const isNearBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 200
-        if (isNearBottom || messages[messages.length - 1]?.role === "user") {
-          messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-        }
-      }
-    }
-  }, [messages, isLoading])
-
-  // Handle scroll events to show/hide scroll to bottom button
-  useEffect(() => {
-    const chatContainer = chatContainerRef.current
-    if (!chatContainer) return
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainer
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight
-      setShowScrollButton(distanceFromBottom > 200)
-    }
-
-    chatContainer.addEventListener('scroll', handleScroll)
-    return () => chatContainer.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Handle text selection in chat
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection()
-      if (selection && selection.toString().trim()) {
-        setSelectedText(selection.toString().trim())
-      } else {
-        setSelectedText("")
-      }
-    }
-
-    document.addEventListener('selectionchange', handleSelectionChange)
-    return () => document.removeEventListener('selectionchange', handleSelectionChange)
-  }, [])
+  // Optimized input change handler
+  const handleOptimizedChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleOptimizedInputChange(e, handleInputChange)
+  }, [handleInputChange, handleOptimizedInputChange])
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -143,28 +114,24 @@ export default function ChatPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(theme === "dark" ? "light" : "dark")
-  }
+  }, [theme, setTheme])
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     setLanguage(language === "en" ? "bn" : "en")
-  }
+  }, [language])
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file)
-  }
+  }, [])
 
-  const handleFileClear = () => {
+  const handleFileClear = useCallback(() => {
     setSelectedFile(null)
     setUploadProgress(0)
-  }
+  }, [])
 
-  const handleFileUpload = async () => {
+  const handleFileUpload = useCallback(async () => {
     if (!selectedFile) return
 
     setIsUploading(true)
@@ -225,27 +192,27 @@ export default function ChatPage() {
         variant: "destructive",
       })
     }
-  }
+  }, [selectedFile, language, append, toast])
 
-  const handleVoiceInput = (transcript: string) => {
+  const handleVoiceInput = useCallback((transcript: string) => {
     handleInputChange({ target: { value: transcript } } as React.ChangeEvent<HTMLTextAreaElement>)
     setIsVoiceInputActive(false)
-  }
+  }, [handleInputChange])
 
-  const handleVoiceInputToggle = () => {
+  const handleVoiceInputToggle = useCallback(() => {
     setIsVoiceInputActive(!isVoiceInputActive)
-  }
+  }, [isVoiceInputActive])
 
-  const handleFileUploadToggle = () => {
+  const handleFileUploadToggle = useCallback(() => {
     setShowFileUpload(!showFileUpload)
-  }
+  }, [showFileUpload])
 
-  const handleClearChat = () => {
+  const handleClearChat = useCallback(() => {
     setMessages([])
     setShowWelcome(true)
-  }
+  }, [setMessages])
 
-  const handleCopyMessage = (content: string) => {
+  const handleCopyMessage = useCallback((content: string) => {
     toast({
       title: language === "en" ? "Copied to clipboard" : "ক্লিপবোর্ডে কপি করা হয়েছে",
       description:
@@ -253,13 +220,13 @@ export default function ChatPage() {
           ? "The message has been copied to your clipboard."
           : "বার্তাটি আপনার ক্লিপবোর্ডে কপি করা হয়েছে।",
     })
-  }
+  }, [language, toast])
 
-  const handleRegenerateMessage = () => {
+  const handleRegenerateMessage = useCallback(() => {
     reload()
-  }
+  }, [reload])
 
-  const handlePromptSelect = (prompt: string) => {
+  const handlePromptSelect = useCallback((prompt: string) => {
     // For structured response, add a prefix if it's just the button text
     if (prompt === t.structured) {
       prompt = language === "en" 
@@ -268,10 +235,10 @@ export default function ChatPage() {
     }
     
     handleInputChange({ target: { value: prompt } } as React.ChangeEvent<HTMLTextAreaElement>)
-  }
+  }, [t, language, handleInputChange])
 
   // Handle quick actions on selected text
-  const handleQuickAction = (action: string) => {
+  const handleQuickAction = useCallback((action: string) => {
     if (!selectedText) return
     
     let prompt = ""
@@ -301,478 +268,68 @@ export default function ChatPage() {
     if (textarea) {
       textarea.focus()
     }
-  }
-
-  // Translations
-  const translations = {
-    en: {
-      welcome: "Welcome to Wiser AI",
-      helpLine: "How can I assist you today?",
-      placeholder: "Ask me anything...",
-      deepsearch: "Deep search",
-      think: "Think step by step",
-      explain: "Explain this",
-      summarize: "Summarize",
-      translate: "Translate",
-      code: "Write code",
-      structured: "Structured response",
-      stopVoice: "Stop voice",
-      clearChat: "Clear chat",
-      terms: "Wiser AI may produce inaccurate information about people, places, or facts.",
-      keyboardShortcuts: "Keyboard shortcuts: Ctrl+/ to focus, Ctrl+Enter to send"
-    },
-    bn: {
-      welcome: "ওয়াইজার এআই-তে স্বাগতম",
-      helpLine: "আমি আপনাকে কীভাবে সাহায্য করতে পারি?",
-      placeholder: "আমাকে যেকোনো প্রশ্ন করুন...",
-      deepsearch: "গভীর অনুসন্ধান",
-      think: "ধাপে ধাপে চিন্তা করুন",
-      explain: "ব্যাখ্যা করুন",
-      summarize: "সারাংশ",
-      translate: "অনুবাদ করুন",
-      code: "কোড লিখুন",
-      structured: "কাঠামোগত প্রতিক্রিয়া",
-      stopVoice: "ভয়েস বন্ধ করুন",
-      clearChat: "চ্যাট মুছুন",
-      terms: "ওয়াইজার এআই মানুষ, স্থান বা তথ্য সম্পর্কে অসঠিক তথ্য উৎপন্ন করতে পারে।",
-      keyboardShortcuts: "কীবোর্ড শর্টকাট: ফোকাস করতে Ctrl+/, পাঠাতে Ctrl+Enter"
-    },
-  }
-
-  const t = translations[language]
-
-  // Action buttons
-  const actions = [
-    { icon: <BookOpen size={18} />, text: t.explain },
-    { icon: <HelpCircle size={18} />, text: t.summarize },
-    { icon: <BarChart3 size={18} />, text: t.translate },
-    { icon: <Code size={18} />, text: t.code },
-    { icon: <Lightbulb size={18} />, text: t.structured },
-  ]
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-    exit: {
-      opacity: 0,
-      transition: {
-        duration: 0.2,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 24,
-      },
-    },
-    exit: {
-      y: -20,
-      opacity: 0,
-      transition: {
-        duration: 0.2,
-      },
-    },
-  }
-
-  const headerVariants = {
-    hidden: { y: -20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 24,
-        delay: 0.1,
-      },
-    },
-  }
+  }, [selectedText, language, handleInputChange, setSelectedText])
 
   return (
     <main className="flex flex-col h-screen bg-[#1A1B1E] overflow-hidden">
-      {/* Minimal Header */}
-      <motion.header
-        className="flex justify-between items-center p-4 border-b border-white/5 bg-[#1A1B1E]/90 backdrop-blur-lg sticky top-0 z-50 shadow-glow-enhanced"
-        initial="hidden"
-        animate="visible"
-        variants={headerVariants}
-      >
-        <motion.div 
-          className="flex items-center gap-2" 
-          whileHover={{ scale: 1.02 }} 
-          whileTap={{ scale: 0.98 }}
-        >
-          <span className="text-xl font-semibold bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent hover:from-blue-500 hover:via-indigo-600 hover:to-purple-600 transition-all duration-300">
-            wiser
-          </span>
-        </motion.div>
-        <div className="flex items-center gap-3">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleLanguage}
-              className="rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 shadow-glow"
-            >
-              {language === "en" ? "বাং" : "EN"}
-            </Button>
-          </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowPaymentModal(true)}
-              className="rounded-full bg-white/5 hover:bg-white/10 hover:text-yellow-400 transition-all duration-300 shadow-glow relative"
-              title={language === "en" ? "Premium subscription" : "প্রিমিয়াম সাবস্ক্রিপশন"}
-            >
-              <Crown size={18} className="text-yellow-400" />
-              <motion.span 
-                className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.5, 1, 0.5]
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
-            </Button>
-          </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowSettingsDialog(!showSettingsDialog)}
-              className="rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 shadow-glow"
-            >
-              <Settings size={18} />
-            </Button>
-          </motion.div>
-          <AuthWrapper 
+      {/* Header Component */}
+      <ChatHeader 
             language={language} 
-            onSettingsClick={() => setShowSettingsDialog(!showSettingsDialog)}
-            onHelpClick={() => {}} 
-          />
-        </div>
-      </motion.header>
+        toggleLanguage={toggleLanguage}
+        setShowPaymentModal={setShowPaymentModal}
+        setShowSettingsDialog={setShowSettingsDialog}
+        showSettingsDialog={showSettingsDialog}
+      />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 overflow-hidden">
         <AnimatePresence mode="wait">
           {showWelcome ? (
-            <motion.div
-              key="welcome"
-              className="flex flex-col items-center justify-center w-full max-w-2xl"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={containerVariants}
-            >
-              <motion.div className="text-center space-y-3 mb-10" variants={itemVariants}>
-                <h1 className="text-4xl font-semibold text-foreground bg-gradient-to-r from-blue-100 to-white bg-clip-text">
-                  {t.welcome}
-                </h1>
-                <p className="text-2xl text-muted-foreground">{t.helpLine}</p>
-              </motion.div>
-
-              {/* Input area */}
-              <motion.div className="w-full max-w-2xl mb-8" variants={itemVariants}>
-                <form onSubmit={handleSubmit} className="w-full">
-                  <motion.div
-                    className={`relative bg-white/5 backdrop-blur-md rounded-2xl p-4 border ${isFocused ? "border-blue-500/30" : "border-white/10"} transition-all duration-300`}
-                    animate={{ boxShadow: isFocused ? "0 0 20px rgba(59, 130, 246, 0.1)" : "0 0 0 rgba(0, 0, 0, 0)" }}
-                  >
-                    <AutoResizeTextarea
-                      value={input}
-                      onChange={handleInputChange}
-                      placeholder={t.placeholder}
-                      className="w-full px-4 py-3 bg-transparent border-0 focus:ring-0 text-lg resize-none"
-                      onFocus={() => setIsFocused(true)}
-                      onBlur={() => setIsFocused(false)}
-                    />
-
-                    <div className="flex items-center mt-3">
-                      <div className="flex gap-2">
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 rounded-full bg-white/5 hover:bg-white/10 transition-colors duration-300"
-                            onClick={() => handlePromptSelect(t.deepsearch)}
-                          >
-                            <Search size={16} className="mr-2" />
-                            {t.deepsearch}
-                          </Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 rounded-full bg-white/5 hover:bg-white/10 transition-colors duration-300"
-                            onClick={() => handlePromptSelect(t.think)}
-                          >
-                            <Lightbulb size={16} className="mr-2" />
-                            {t.think}
-                          </Button>
-                        </motion.div>
-                      </div>
-
-                      <div className="flex-1"></div>
-
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        animate={{
-                          opacity: input.trim() ? 1 : 0.5,
-                          scale: input.trim() ? 1 : 0.95,
-                        }}
-                      >
-                        <Button
-                          type="submit"
-                          size="icon"
-                          disabled={isLoading || !input.trim()}
-                          className="h-8 w-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-300"
-                        >
-                          <ArrowUp size={16} />
-                        </Button>
-                      </motion.div>
-                    </div>
-                  </motion.div>
-                </form>
-              </motion.div>
-
-              {/* Action buttons */}
-              <motion.div className="flex justify-center gap-2 flex-wrap" variants={itemVariants}>
-                {actions.map((action, index) => (
-                  <motion.div
-                    key={action.text}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                      transition: { delay: 0.3 + index * 0.1 },
-                    }}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 rounded-full bg-white/5 hover:bg-white/10 transition-colors duration-300"
-                      onClick={() => handlePromptSelect(action.text)}
-                    >
-                      {action.icon}
-                      <span className="ml-2">{action.text}</span>
-                    </Button>
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              {/* Terms */}
-              <motion.p
-                className="text-xs text-center text-muted-foreground/60 mt-10"
-                initial={{ opacity: 0 }}
-                animate={{
-                  opacity: 0.6,
-                  transition: { delay: 0.8 },
-                }}
-              >
-                {t.terms}
-              </motion.p>
-            </motion.div>
+            <WelcomeScreen
+              input={input}
+              handleInputChange={handleOptimizedChange}
+              handleSubmit={handleSubmit}
+              handlePromptSelect={handlePromptSelect}
+              isLoading={isLoading}
+              language={language}
+            />
           ) : (
+            <ChatInterface
+              messages={messages}
+              input={input}
+              handleInputChange={handleOptimizedChange}
+              handleSubmit={handleSubmit}
+              isLoading={isLoading}
+              language={language}
+              handleRegenerateMessage={handleRegenerateMessage}
+              handleCopyMessage={handleCopyMessage}
+              handlePromptSelect={handlePromptSelect}
+              handleVoiceInputToggle={handleVoiceInputToggle}
+              handleFileUploadToggle={handleFileUploadToggle}
+              isVoiceInputActive={isVoiceInputActive}
+              handleClearChat={handleClearChat}
+              handleQuickAction={handleQuickAction}
+              selectedText={selectedText}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Voice Input Component */}
+        <AnimatePresence>
+          {isVoiceInputActive && (
             <motion.div
-              key="chat"
-              ref={chatContainerRef}
-              className="w-full max-w-3xl mx-auto h-full overflow-y-auto py-4 px-2 chat-container no-scrollbar"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
             >
-              <div className="space-y-4">
-                <AnimatePresence initial={false}>
-                  {messages.map((message, index) => (
-                    <motion.div
-                      key={message.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 30,
-                        delay: index * 0.05,
-                      }}
-                    >
-                      <EnhancedChatMessage
-                        message={message}
-                        language={language}
-                        onRegenerate={message.role === "assistant" ? handleRegenerateMessage : undefined}
-                        onCopy={handleCopyMessage}
-                        isLastMessage={index === messages.length - 1 && message.role === "assistant"}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="max-w-3xl mx-auto py-4"
-                  >
-                    <div className="inline-block bg-[#2A2B30] rounded-t-2xl rounded-br-2xl rounded-bl-sm p-4">
-                      <EnhancedTypingIndicator variant="modern" />
-                    </div>
-                  </motion.div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Scroll to bottom button */}
-              <AnimatePresence>
-                {showScrollButton && (
-                  <motion.div
-                    className="fixed bottom-24 right-4 z-10"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Button
-                      onClick={scrollToBottom}
-                      size="icon"
-                      className="h-10 w-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
-                    >
-                      <ChevronDown size={20} />
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Selected text quick actions */}
-              <AnimatePresence>
-                {selectedText && (
-                  <motion.div
-                    className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-10 bg-white/10 backdrop-blur-md rounded-full shadow-lg border border-white/20 p-1"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center gap-1">
-                      <Button
-                        onClick={() => handleQuickAction("explain")}
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-full hover:bg-white/10"
-                      >
-                        <BookOpen size={16} className="mr-1" />
-                        {t.explain}
-                      </Button>
-                      <Button
-                        onClick={() => handleQuickAction("summarize")}
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-full hover:bg-white/10"
-                      >
-                        <HelpCircle size={16} className="mr-1" />
-                        {t.summarize}
-                      </Button>
-                      <Button
-                        onClick={() => handleQuickAction("translate")}
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-full hover:bg-white/10"
-                      >
-                        <BarChart3 size={16} className="mr-1" />
-                        {t.translate}
-                      </Button>
-                      <Button
-                        onClick={() => handleQuickAction("code")}
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-full hover:bg-white/10"
-                      >
-                        <Code size={16} className="mr-1" />
-                        {t.code}
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Chat input when in chat mode */}
               <motion.div
-                className="fixed bottom-0 left-0 right-0 p-4 bg-[#1A1B1E]/80 backdrop-blur-md border-t border-white/5"
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="w-full max-w-md p-6 bg-background rounded-2xl shadow-xl"
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
               >
-                <div className="max-w-3xl mx-auto">
-                  {isVoiceInputActive ? (
-                    <div className="flex items-center justify-center p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
                       <VoiceInput onTranscription={handleVoiceInput} language={language} />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsVoiceInputActive(false)}
-                        className="ml-4 rounded-full"
-                      >
-                        {t.stopVoice}
-                      </Button>
-                    </div>
-                  ) : (
-                    <EnhancedChatInput
-                      input={input}
-                      handleInputChange={handleDirectInputChange}
-                      handleSubmit={handleSubmit}
-                      isLoading={isLoading}
-                      onVoiceInputToggle={handleVoiceInputToggle}
-                      onFileUploadToggle={handleFileUploadToggle}
-                      isVoiceInputActive={isVoiceInputActive}
-                      language={language}
-                      suggestions={actions.map(action => ({ icon: action.icon, text: action.text }))}
-                      onSuggestionClick={handlePromptSelect}
-                      maxLength={4000}
-                    />
-                  )}
-
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="text-xs text-muted-foreground/60">
-                      {t.keyboardShortcuts}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearChat}
-                      className="text-xs rounded-full hover:bg-white/5"
-                    >
-                      {t.clearChat}
-                    </Button>
-                  </div>
-                </div>
               </motion.div>
             </motion.div>
           )}
@@ -805,9 +362,9 @@ export default function ChatPage() {
                 />
                 {selectedFile && !isUploading && (
                   <div className="mt-4 flex justify-end">
-                    <Button onClick={handleFileUpload} className="rounded-full">
+                    <button onClick={handleFileUpload} className="rounded-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2">
                       {language === "en" ? "Process File" : "ফাইল প্রসেস করুন"}
-                    </Button>
+                    </button>
                   </div>
                 )}
               </motion.div>

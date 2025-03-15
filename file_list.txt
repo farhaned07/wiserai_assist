@@ -1,0 +1,3 @@
+This file is created to help analyze the project structure. 
+
+DEEPSEEK_API_KEY=sk-0265d27b35f44f5bb8039587fd208b16

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Search, Lightbulb, Mic, Paperclip, ArrowUp, Sparkles } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -8,22 +8,27 @@ import AutoResizeTextarea from "@/components/auto-resize-textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
+interface Suggestion {
+  icon: React.ReactNode
+  text: string
+}
+
 interface EnhancedChatInputProps {
   input: string
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  handleSubmit: (e: React.FormEvent) => void
   isLoading: boolean
   onVoiceInputToggle: () => void
   onFileUploadToggle: () => void
   isVoiceInputActive: boolean
   language: "en" | "bn"
-  suggestions?: { icon: React.ReactNode; text: string }[]
+  suggestions?: Suggestion[]
   onSuggestionClick?: (suggestion: string) => void
   disabled?: boolean
   maxLength?: number
 }
 
-export default function EnhancedChatInput({
+const EnhancedChatInput = React.memo(({
   input,
   handleInputChange,
   handleSubmit,
@@ -36,7 +41,7 @@ export default function EnhancedChatInput({
   onSuggestionClick,
   disabled = false,
   maxLength = 4000,
-}: EnhancedChatInputProps) {
+}: EnhancedChatInputProps) => {
   const [isFocused, setIsFocused] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
@@ -52,7 +57,10 @@ export default function EnhancedChatInput({
       shortcuts: "Keyboard shortcuts: Ctrl+Enter to send",
       startRecording: "Start recording",
       stopRecording: "Stop recording",
-      attachFile: "Attach file"
+      attachFile: "Attach file",
+      voiceInput: "Voice input",
+      fileUpload: "Upload file",
+      charactersLeft: "characters left",
     },
     bn: {
       placeholder: "আমাকে যেকোনো প্রশ্ন করুন...",
@@ -62,7 +70,10 @@ export default function EnhancedChatInput({
       shortcuts: "কীবোর্ড শর্টকাট: পাঠাতে Ctrl+Enter",
       startRecording: "অনুসন্ধান শুরু করুন",
       stopRecording: "অনুসন্ধান শেষ করুন",
-      attachFile: "ফাইল সংযোগ করুন"
+      attachFile: "ফাইল সংযোগ করুন",
+      voiceInput: "ভয়েস ইনপুট",
+      fileUpload: "ফাইল আপলোড করুন",
+      charactersLeft: "অক্ষর বাকি আছে",
     },
   }[language]
 
@@ -128,6 +139,21 @@ export default function EnhancedChatInput({
     visible: { opacity: 1, y: 0, height: "auto" },
   }
 
+  // Handle Ctrl+Enter to submit
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault()
+      if (input.trim() && !isLoading) {
+        formRef.current?.requestSubmit()
+      }
+    }
+  }, [input, isLoading])
+
+  // Calculate remaining characters
+  const remainingChars = maxLength - input.length
+  const isNearLimit = remainingChars < maxLength * 0.1
+  const isAtLimit = remainingChars <= 0
+
   return (
     <div className="w-full">
       <form ref={formRef} onSubmit={handleSubmit} className="w-full">
@@ -147,6 +173,7 @@ export default function EnhancedChatInput({
             <AutoResizeTextarea
               value={input}
               onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               placeholder={t.placeholder}
@@ -158,7 +185,8 @@ export default function EnhancedChatInput({
                 "scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent",
                 "transition-all duration-300 ease-in-out",
                 "focus:placeholder:text-muted-foreground/70",
-                disabled && "opacity-50 cursor-not-allowed"
+                disabled && "opacity-50 cursor-not-allowed",
+                isAtLimit ? "text-red-400" : ""
               )}
             />
 
@@ -183,6 +211,7 @@ export default function EnhancedChatInput({
                         )}
                         onClick={onVoiceInputToggle}
                         disabled={disabled || isLoading}
+                        title={t.voiceInput}
                       >
                         <Mic size={16} className={isVoiceInputActive ? "animate-bounce" : ""} />
                       </Button>
@@ -209,6 +238,7 @@ export default function EnhancedChatInput({
                         className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-blue-400 transition-all duration-300 transform hover:scale-105"
                         onClick={onFileUploadToggle}
                         disabled={disabled || isLoading}
+                        title={t.fileUpload}
                       >
                         <Paperclip size={16} />
                       </Button>
@@ -233,7 +263,7 @@ export default function EnhancedChatInput({
                       <Button
                         type="submit"
                         size="icon"
-                        disabled={isLoading || !input.trim() || disabled}
+                        disabled={isLoading || !input.trim() || isAtLimit}
                         className={cn(
                           "h-8 w-8 rounded-full",
                           "bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500",
@@ -243,6 +273,7 @@ export default function EnhancedChatInput({
                           "disabled:opacity-50 disabled:cursor-not-allowed",
                           "disabled:hover:from-blue-500 disabled:hover:via-indigo-500 disabled:hover:to-purple-500"
                         )}
+                        title={t.sendMessage}
                       >
                         <ArrowUp size={16} className={isLoading ? "animate-bounce" : ""} />
                       </Button>
@@ -319,6 +350,10 @@ export default function EnhancedChatInput({
       </form>
     </div>
   )
-}
+})
+
+EnhancedChatInput.displayName = "EnhancedChatInput"
+
+export default EnhancedChatInput
 
 

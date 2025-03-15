@@ -5,34 +5,34 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 10% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
 
-    --radius: 1rem;
+    --radius: 0.5rem;
 
     --user: 221 83% 53%;
     --user-foreground: 0 0% 100%;
@@ -42,39 +42,76 @@
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 224 71% 4%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
 
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 216 34% 17%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --ring: 216 34% 17%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
 
     --user: 210 40% 98%;
     --user-foreground: 222 47% 11%;
 
     --assistant: 222 47% 11%;
     --assistant-foreground: 210 40% 98%;
+  }
+
+  /* Bengali text optimizations */
+  .font-bengali {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
+  }
+
+  /* Adjust heading sizes for Bengali */
+  h1.font-bengali {
+    @apply text-3xl font-bold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  h2.font-bengali {
+    @apply text-2xl font-bold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  h3.font-bengali {
+    @apply text-xl font-semibold tracking-tight;
+    letter-spacing: -0.01em;
+  }
+
+  /* Optimize paragraph text for Bengali */
+  p.font-bengali {
+    @apply text-base leading-relaxed;
+    letter-spacing: -0.005em;
+  }
+
+  /* Button text in Bengali */
+  button.font-bengali {
+    @apply font-medium;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -332,9 +369,7 @@ button:active {
 
 /* Shadow glow effect for focused elements */
 .shadow-glow {
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2),
-              0 0 8px rgba(255, 255, 255, 0.1);
-  transition: box-shadow 0.3s ease;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
 .shadow-glow:hover {
@@ -466,17 +501,17 @@ button:active {
 
 /* Tooltip animations */
 .tooltip-animation {
-  animation: tooltipFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: tooltip-slide-up 0.2s ease-out;
 }
 
-@keyframes tooltipFadeIn {
+@keyframes tooltip-slide-up {
   from {
     opacity: 0;
-    transform: scale(0.97) translateY(5px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
 }
 
@@ -526,10 +561,10 @@ button:active {
 
 /* Enhanced shadow glow effect for elements */
 .shadow-glow-enhanced {
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.3),
-              0 0 12px rgba(255, 255, 255, 0.15),
-              0 0 2px rgba(255, 255, 255, 0.1);
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 0 10px rgba(255, 255, 255, 0.1);
 }
 
 .shadow-glow-enhanced:hover {
@@ -569,5 +604,24 @@ button:active {
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   @apply bg-white/10;
+}
+
+/* Update existing markdown styles to handle Bengali better */
+.markdown.font-bengali {
+  letter-spacing: -0.005em;
+  line-height: 1.8;
+}
+
+.markdown.font-bengali p {
+  @apply mb-4 leading-relaxed;
+  letter-spacing: -0.005em;
+}
+
+.markdown.font-bengali h1,
+.markdown.font-bengali h2,
+.markdown.font-bengali h3,
+.markdown.font-bengali h4 {
+  @apply font-bold tracking-tight;
+  letter-spacing: -0.02em;
 }
 

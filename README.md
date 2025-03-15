@@ -1,4 +1,4 @@
-# Wiser AI Assistant
+# Onnesha AI Assistant
 
 A cutting-edge AI assistant optimized for Bangladesh, featuring bilingual support (Bangla and English) powered by the DeepSeek API.
 
